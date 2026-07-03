@@ -1,0 +1,2 @@
+https://raw.githubusercontent.com/alsyundawy/TrustPositif/refs/heads/main/sunat-trustpositif.txt
+https://raw.githubusercontent.com/alsyundawy/TrustPositif/refs/heads/main/ipaddress_isp_valid.txt
