@@ -49,7 +49,7 @@ SmartDNS Installer automatically detects your server hardware and generates an o
 | --------- | ---------------- |
 | CPU       | 4 Core or Higher |
 | RAM       | 4 GB or Higher   |
-| Storage   | SSD              |
+| Storage   | 15GB SSD         |
 | Network   | IPv4 + IPv6      |
 | OS        | Ubuntu 22.04 LTS |
 
@@ -198,7 +198,7 @@ http://SERVER_IP:8083
 | Task              | Schedule    |
 | ----------------- | ----------- |
 | Blocklist Update  | Daily 03:00 |
-| Root Hints Update | Weekly      |
+| Root Hints Update |      -      |
 
 ---
 
@@ -317,6 +317,7 @@ cat /etc/cron.d/smartdns
 # License
 
 MIT License
+Presented by <a href="https://mynoc.id/" target=_blank>MyNOC.ID</a>
 
 ---
 
