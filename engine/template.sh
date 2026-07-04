@@ -139,11 +139,15 @@ build_dnsdist_acl(){
 
 build_dnsdist_web_acl(){
 
-    DNSDIST_WEB_ACL="127.0.0.1/8"
+    DNSDIST_WEB_ACL=""
 
     while read -r ACL
     do
-        DNSDIST_WEB_ACL+=",$ACL"
+        if [[ -z "$DNSDIST_WEB_ACL" ]]; then
+            DNSDIST_WEB_ACL="$ACL"
+        else
+            DNSDIST_WEB_ACL+=",$ACL"
+        fi
     done < cache/acl.list
 
 }
