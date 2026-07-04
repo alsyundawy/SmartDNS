@@ -27,6 +27,62 @@ is_installed(){
 }
 
 #########################################
+# Repair Install Package
+#########################################
+
+
+repair_package_manager() {
+
+    info "Checking package manager..."
+
+    dpkg --configure -a >/dev/null 2>&1 || true
+
+    apt-get -f install -y >/dev/null 2>&1 || true
+
+    if ! apt-get update; then
+        error "Package manager could not be repaired."
+        return 1
+    fi
+
+    success "Package manager OK."
+
+}
+
+#########################################
+# Wait Package Manager
+#########################################
+
+wait_package_manager(){
+
+    info "Waiting for package manager..."
+
+    local TIMEOUT=180
+    local ELAPSED=0
+
+    while fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
+       || fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
+       || fuser /var/lib/apt/lists/lock >/dev/null 2>&1
+    do
+
+        sleep 2
+
+        ELAPSED=$((ELAPSED+2))
+
+        if (( ELAPSED >= TIMEOUT )); then
+
+            error "Package manager is busy."
+
+            return 1
+
+        fi
+
+    done
+
+    success "Package manager ready."
+
+}
+
+#########################################
 # Install Missing Package
 #########################################
 
@@ -86,24 +142,61 @@ install_packages(){
 
 }
 
-#########################################
-# Repair Install Package
-#########################################
+####################################
+# Verify Packages
+####################################
 
+verify_packages() {
 
-repair_package_manager() {
+    info "Verifying installed packages..."
 
-    info "Checking package manager..."
+    local FAILED=0
 
-    dpkg --configure -a >/dev/null 2>&1 || true
+    command -v unbound >/dev/null 2>&1 || {
+        warn "unbound missing"
+        FAILED=1
+    }
 
-    apt-get -f install -y >/dev/null 2>&1 || true
+    command -v dnsdist >/dev/null 2>&1 || {
+        warn "dnsdist missing"
+        FAILED=1
+    }
 
-    if ! apt-get update; then
-        error "Package manager could not be repaired."
+    command -v dig >/dev/null 2>&1 || {
+        warn "dnsutils missing"
+        FAILED=1
+    }
+
+    command -v curl >/dev/null 2>&1 || {
+        warn "curl missing"
+        FAILED=1
+    }
+
+    command -v wget >/dev/null 2>&1 || {
+        warn "wget missing"
+        FAILED=1
+    }
+
+    command -v unzip >/dev/null 2>&1 || {
+        warn "unzip missing"
+        FAILED=1
+    }
+
+    command -v jq >/dev/null 2>&1 || {
+        warn "jq missing"
+        FAILED=1
+    }
+
+    command -v cdb >/dev/null 2>&1 || {
+        warn "freecdb missing"
+        FAILED=1
+    }
+
+    if (( FAILED )); then
+        error "Required packages are missing."
         return 1
     fi
 
-    success "Package manager OK."
+    success "All required packages installed."
 
 }

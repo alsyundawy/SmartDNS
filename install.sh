@@ -157,16 +157,22 @@ if [[ "$INSTALL_PACKAGE" =~ ^[Yy]$ ]]; then
 	hostnamectl set-hostname SmartDNS
 	success "Hostname set to SmartDNS."
 
+	wait_package_manager || exit 1
+
 	repair_package_manager || exit 1
+
+	wait_package_manager || exit 1
+	
+    install_packages || exit 1
+    save_state PACKAGE
+	
+	verify_packages || exit 1
 	
 	install_swap
 	
 	install_sysctl
 	
 	temp_resolv
-	
-    install_packages || exit 1
-    save_state PACKAGE
 
     info "Backup current configuration..."
     backup_config || exit 1
