@@ -318,7 +318,7 @@ cat /etc/cron.d/smartdns
 
 MIT License
 
-Presented by <a href="https://mynoc.id/" target=_blank>MyNOC.ID</a>
+Presented by <a href="https://mynoc.id/" target="_blank">MyNOC.ID</a>
 
 ---
 
