@@ -86,3 +86,24 @@ install_packages(){
 
 }
 
+#########################################
+# Repair Install Package
+#########################################
+
+
+repair_package_manager() {
+
+    info "Checking package manager..."
+
+    dpkg --configure -a >/dev/null 2>&1 || true
+
+    apt-get -f install -y >/dev/null 2>&1 || true
+
+    if ! apt-get update; then
+        error "Package manager could not be repaired."
+        return 1
+    fi
+
+    success "Package manager OK."
+
+}
