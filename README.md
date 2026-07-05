@@ -36,7 +36,7 @@ SmartDNS Installer automatically detects your server hardware and generates an o
 | Component   | Minimum     |
 | ----------- | ----------- |
 | CPU         | 2 Core      |
-| RAM         | 2 GB        |
+| RAM         | 3 GB        |
 | Storage     | 10 GB       |
 | Network     | Public IPv4 |
 | Root Access | Required    |
