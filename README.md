@@ -159,7 +159,7 @@ Current source:
 
 * TrustPositif Indonesia
 
-Automatic update every day at **03:00 WIB**.
+Automatic update every day at **(Random) WIB**.
 
 ---
 
@@ -197,7 +197,7 @@ http://SERVER_IP:8083
 
 | Task              | Schedule    |
 | ----------------- | ----------- |
-| Blocklist Update  | Daily 03:00 |
+| Blocklist Update  | Random Time |
 | Root Hints Update |      -      |
 
 ---
