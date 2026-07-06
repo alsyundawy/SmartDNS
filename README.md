@@ -66,7 +66,7 @@ Future Support
 
 ---
 
-# Installation
+# Installation / Update
 
 Clone repository
 
@@ -159,7 +159,7 @@ Current source:
 
 * TrustPositif Indonesia
 
-Automatic update every day at **(Random) WIB**.
+Automatic update every day at **Random Time** (mirror available).
 
 ---
 
@@ -197,7 +197,7 @@ http://SERVER_IP:8083
 
 | Task              | Schedule    |
 | ----------------- | ----------- |
-| Blocklist Update  | Random Time |
+| Blocklist Update  |    Daily    |
 | Root Hints Update |      -      |
 
 ---
