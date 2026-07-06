@@ -25,3 +25,5 @@ logs/*
 Thumbs.db
 
 swapfile
+
+.well-known/

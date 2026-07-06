@@ -73,12 +73,13 @@ echo "======================================" | tee -a "$LOG"
 # Download Sources
 #########################################
 
+SUCCESS=0
+
 while read -r URL
 do
-
     [[ -z "$URL" || "$URL" =~ ^# ]] && continue
 
-    echo "Downloading $URL" | tee -a "$LOG"
+    echo "Trying $URL" | tee -a "$LOG"
 
     DOWNLOAD=$(mktemp)
 
@@ -93,17 +94,28 @@ do
         -o "$DOWNLOAD"
     then
 
-        cat "$DOWNLOAD" >> "$RAW"
+        # Pastikan file tidak kosong
+        if [[ -s "$DOWNLOAD" ]] && ! grep -qi "<html" "$DOWNLOAD"; then
+            cp "$DOWNLOAD" "$RAW"
+            SUCCESS=1
+            echo "Success: $URL" | tee -a "$LOG"
+            rm -f "$DOWNLOAD"
+            break
+        fi
 
+        echo "Invalid content: $URL" | tee -a "$LOG"
     else
-
         echo "Failed: $URL" | tee -a "$LOG"
-
     fi
 
     rm -f "$DOWNLOAD"
 
 done < "$SOURCE"
+
+if [[ $SUCCESS -eq 0 ]]; then
+    echo "All sources failed." | tee -a "$LOG"
+    exit 1
+fi
 
 #########################################
 # Validation

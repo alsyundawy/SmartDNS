@@ -4,20 +4,23 @@
 # Install Scheduler
 ####################################
 
-install_scheduler(){
+install_scheduler() {
 
     info "Installing Scheduler..."
 
-    # Pastikan cron terinstall & aktif
+    # Pastikan cron aktif
     systemctl enable --now cron >/dev/null 2>&1 || true
+
+    # Random schedule (sekali saat install)
+    HOUR=$(( RANDOM % 6 ))      # 00-05
+    MINUTE=$(( RANDOM % 60 ))   # 00-59
 
     cat >/etc/cron.d/smartdns <<EOF
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # SmartDNS Auto Update
-
-0 3 * * * root ${BASE_DIR}/data/update-blocklist.sh >/var/log/smartdns-blocklist.log 2>&1
+${MINUTE} ${HOUR} * * * root sleep \$(( RANDOM % 1800 )); ${BASE_DIR}/data/update-blocklist.sh >>/var/log/smartdns-blocklist.log 2>&1
 
 EOF
 
@@ -28,5 +31,6 @@ EOF
     systemctl restart cron >/dev/null 2>&1
 
     success "Scheduler installed."
+    info "Daily update scheduled at $(printf "%02d:%02d" "$HOUR" "$MINUTE") + random delay (0-30 minutes)."
 
 }
