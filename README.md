@@ -1,218 +1,348 @@
-# SmartDNS Installer
+<div align="center">
 
-High Performance Recursive DNS Resolver built with **Unbound** and **dnsdist** for ISP, Enterprise, VPS and Self-Hosted environments.
+# SmartDNS
 
-SmartDNS Installer automatically detects your server hardware and generates an optimized DNS configuration with minimal user interaction.
+### Automated DNS Resolver Platform for ISP & Enterprise Networks
+
+Developed and maintained by **MyNOC.ID**
+
+<img src="docs/images/banner.png" width="100%">
+
+<br>
+
+![Version](https://img.shields.io/badge/version-v1.0.0-0078D7)
+![Build](https://img.shields.io/badge/build-stable-success)
+![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04+-E95420)
+![Debian](https://img.shields.io/badge/Debian-12-A81D33)
+![License](https://img.shields.io/github/license/ichandkusuma/SmartDNS)
+![Status](https://img.shields.io/badge/status-production_ready-brightgreen)
+
+</div>
+
+---
+
+# About
+
+SmartDNS is an open-source DNS Resolver Platform developed by **MyNOC.ID**.
+
+Designed specifically for **Internet Service Providers (ISP)**, **Enterprise Networks**, **Network Operators**, and **Data Centers**, SmartDNS automates deployment, optimization, security hardening, monitoring, and lifecycle management of recursive DNS servers using **Unbound** and **dnsdist**.
+
+Starting from **v1.0.0**, SmartDNS also includes a built-in telemetry platform and centralized monitoring dashboard for managing SmartDNS deployments.
 
 ---
 
 # Features
 
-* One Command Installation
-* Automatic Hardware Detection
-* Smart CPU & RAM Tuning
-* Recursive DNS Resolver (Unbound)
-* High Performance DNS Load Balancer (dnsdist)
-* DNSSEC Validation
-* DNS Packet Cache
-* IPv4 & IPv6 Support
-* DNS Blocklist (TrustPositif)
-* Domain Whitelist
-* Domain Insecure Support
-* DNSDist Web Management
-* Automatic Blocklist Update
-* Automatic Root Hints Update
-* Automatic Backup
-* Automatic Health Check
-* Automatic Timezone Configuration
-* Automatic Hostname Configuration
-* Smart Scheduler (Cron)
-* Interactive Installation Wizard
+## Smart Installation
+
+- Automatic Hardware Detection
+- Automatic Operating System Detection
+- Automatic CPU Detection
+- Automatic Memory Detection
+- Automatic Network Detection
+- Automatic Internet Detection
+- Automatic Hostname Detection
+- Automatic Kernel Detection
+- Automatic Virtualization Detection
+- Automatic Uptime Detection
+
+---
+
+## Smart Configuration
+
+- Automatic Unbound Configuration
+- Automatic dnsdist Configuration
+- Automatic Runtime Builder
+- Automatic ACL Generator
+- Automatic Security Hardening
+- Automatic Swap Optimization
+- Automatic Sysctl Optimization
+
+---
+
+## DNS Features
+
+- DNSSEC
+- IPv6 Support
+- DNS Blocklist
+- Rate Limiting
+- Query Logging
+- dnsdist Web API
+
+---
+
+## Monitoring
+
+- Automatic Heartbeat
+- Built-in Telemetry
+- Dashboard
+- Node Inventory
+- Node Detail
+- Statistics Dashboard
+- Version Distribution
+- Online / Offline Monitoring
+
+---
+
+# Supported Operating Systems
+
+| Distribution | Status |
+|--------------|--------|
+| Ubuntu 22.04 LTS | ✅ Supported |
+| Debian 12 | ✅ Supported |
+| Ubuntu 24.04 LTS | ⚠ Experimental |
 
 ---
 
 # Minimum Requirements
 
-| Component   | Minimum     |
-| ----------- | ----------- |
-| CPU         | 2 Core      |
-| RAM         | 3 GB        |
-| Storage     | 10 GB       |
-| Network     | Public IPv4 |
-| Root Access | Required    |
+| Component | Minimum |
+|-----------|---------:|
+| CPU | 2 Core |
+| RAM | 2 GB |
+| Storage | 20 GB |
+| Internet | Required |
 
 ---
 
-# Recommended Requirements
-
-| Component | Recommended      |
-| --------- | ---------------- |
-| CPU       | 4 Core or Higher |
-| RAM       | 4 GB or Higher   |
-| Storage   | 15GB SSD         |
-| Network   | IPv4 + IPv6      |
-| OS        | Ubuntu 22.04 LTS |
-
----
-
-# Supported Operating System
-
-* Ubuntu 22.04 LTS (Recommended)
-
-Future Support
-
-* Ubuntu 24.04 LTS
-* Debian 12
-
----
-
-# Installation / Update
-
-Clone repository
+# Installation
 
 ```bash
 git clone https://github.com/ichandkusuma/SmartDNS.git
+
+cd SmartDNS
+
+bash install.sh
 ```
 
-Enter project directory
+---
+
+# Updating SmartDNS
+
+Updating SmartDNS uses the same installer.
 
 ```bash
 cd SmartDNS
+
+git pull
+
+bash install.sh
 ```
 
-Grant execute permission
+The installer will automatically:
 
-```bash
-chmod +x install.sh
-```
+- Detect existing installation
+- Preserve UUID
+- Preserve telemetry information
+- Update SmartDNS components
+- Update templates
+- Update scheduler
+- Restart required services
 
-Run installer
-
-```bash
-./install.sh
-```
-
----
-
-# Installation Wizard
-
-The installer will automatically configure:
-
-* Hostname
-* Timezone
-* CPU Threads
-* Cache Size
-* DNSSEC
-* IPv6
-* Packet Cache
-* DNSDist Web Password
-* DNSDist API Key
-* Recursive Port
-* Frontend Port
-* Spoof IPv4
-* Spoof IPv6
-* Resolver ACL
+No manual migration is required.
 
 ---
 
-# Default Service Ports
+# Installation Modes
 
-| Service            | Port |
-| ------------------ | ---: |
-| DNS Resolver       |   53 |
-| Recursive Resolver | 5300 |
-| DNSDist Web UI     | 8083 |
+## Fresh Installation
 
----
+If SmartDNS has never been installed, the installer performs a full installation.
 
-# DNS Features
+## Upgrade
 
-## DNSSEC
+If an existing SmartDNS installation is detected, the installer automatically performs an upgrade while preserving:
 
-Validate DNS responses using DNSSEC.
-
----
-
-## Recursive Resolver
-
-Uses Unbound as a full recursive DNS resolver.
+- UUID
+- Telemetry
+- Existing configuration
+- Scheduler
+- Runtime information
 
 ---
 
-## DNS Cache
-
-Optimized packet cache and recursive cache.
-
----
-
-## IPv4 & IPv6
-
-Supports both IPv4 and IPv6.
-
----
-
-## DNS Blocklist
-
-Automatically blocks malicious and restricted domains.
-
-Current source:
-
-* TrustPositif Indonesia
-
-Automatic update every day at **Random Time** (mirror available).
-
----
-
-## Domain Whitelist
-
-Domains can bypass blocklist.
-
-Example:
-
-* bri.co.id
-* bca.co.id
-* bankmandiri.co.id
-
----
-
-## Domain Insecure
-
-Support for domains that have DNSSEC validation issues.
-
----
-
-## DNSDist Web UI
-
-Manage DNSDist using a web browser.
-
-Default URL
+# Smart Installation Workflow
 
 ```
-http://SERVER_IP:8083
+Hardware Detection
+
+        │
+
+        ▼
+
+Smart Auto Tuning
+
+        │
+
+        ▼
+
+Installation Wizard
+
+        │
+
+        ▼
+
+ACL Generator
+
+        │
+
+        ▼
+
+Security Hardening
+
+        │
+
+        ▼
+
+Blocklist Installation
+
+        │
+
+        ▼
+
+Runtime Builder
+
+        │
+
+        ▼
+
+Configuration Deployment
+
+        │
+
+        ▼
+
+Health Check
+
+        │
+
+        ▼
+
+Heartbeat Registration
+
+        │
+
+        ▼
+
+Monitoring Dashboard
 ```
 
 ---
 
-# Automatic Scheduler
+# Smart Auto Tuning
 
-| Task              | Schedule    |
-| ----------------- | ----------- |
-| Blocklist Update  |    Daily    |
-| Root Hints Update |      -      |
+SmartDNS automatically calculates the optimal configuration based on detected hardware.
+
+## Unbound
+
+- Threads
+- RRSET Cache
+- Message Cache
+- Slabs
+- Outgoing Range
+- Number of Queries
+- Infra Cache
+
+## dnsdist
+
+- Packet Cache
+- TCP Threads
+- TCP Queue
+- UDP Outstanding
+
+No manual tuning is required.
 
 ---
 
-# Generated Automatically
+# Monitoring Platform
 
-During installation SmartDNS automatically generates:
+SmartDNS Monitoring includes:
 
-* DNSDist Secret Key
-* DNSDist API Key
-* DNSDist Web Password
-* Optimized Cache Size
-* Optimized Thread Count
-* Optimized Performance Configuration
-* Resolver ACL
+- Dashboard
+- Nodes
+- Node Detail
+- Statistics
+- Version Distribution
+- Operating System Distribution
+- Virtualization Distribution
+- IPv6 Statistics
+- DNSSEC Statistics
+- Online / Offline Status
+
+---
+
+# Built-in Telemetry
+
+Every SmartDNS installation automatically sends a heartbeat every **5 minutes**.
+
+Collected information:
+
+- SmartDNS Version
+- UUID
+- Operating System
+- Kernel
+- CPU Model
+- CPU Threads
+- Memory
+- Virtualization
+- IPv4
+- IPv6
+- DNSSEC Status
+- Query Log Status
+- Rate Limit Status
+- Smart Tuning Configuration
+- First Seen
+- Last Seen
+
+---
+
+# Privacy
+
+SmartDNS **does NOT collect**:
+
+- DNS Queries
+- Customer Traffic
+- Resolver Cache
+- Domain Names
+- Client IP Addresses
+- Personal Information
+
+Telemetry is used only for:
+
+- Version Statistics
+- Compatibility
+- Installation Monitoring
+- Deployment Statistics
+
+---
+
+# Architecture
+
+```
+             SmartDNS Node
+
+                    │
+
+      Heartbeat (Every 5 Minutes)
+
+                    │
+
+                    ▼
+
+         SmartDNS Telemetry API
+
+                    │
+
+                    ▼
+
+             JSON Storage
+
+                    │
+
+                    ▼
+
+      SmartDNS Monitoring Dashboard
+```
 
 ---
 
@@ -220,110 +350,135 @@ During installation SmartDNS automatically generates:
 
 ```
 SmartDNS/
+
 ├── cache/
 ├── data/
+├── docs/
 ├── engine/
+├── lib/
 ├── output/
+├── scripts/
 ├── templates/
+├── VERSION
 ├── install.sh
-├── uninstall.sh
 └── README.md
 ```
 
 ---
 
-# Useful Commands
+# Runtime Files
 
-## Restart DNS
+SmartDNS stores runtime information under:
 
-```bash
-systemctl restart unbound
-systemctl restart dnsdist
 ```
+/var/lib/smartdns/
+
+├── uuid
+├── install.json
+└── install.env
+```
+
+These files are automatically created during installation and preserved during upgrades.
 
 ---
 
-## Service Status
+# Screenshots
 
-```bash
-systemctl status unbound
-systemctl status dnsdist
-```
+## Dashboard
 
----
-
-## Test DNS
-
-```bash
-dig @127.0.0.1 google.com
-```
-
-IPv6
-
-```bash
-dig @::1 google.com
-```
+![Dashboard](docs/images/dashboard.png)
 
 ---
 
-## Check Configuration
+## Nodes
 
-Unbound
-
-```bash
-unbound-checkconf
-```
-
-DNSDist
-
-```bash
-dnsdist --check-config
-```
+![Nodes](docs/images/nodes.png)
 
 ---
 
-## Check Listening Port
+## Node Detail
 
-```bash
-ss -lntup | grep 53
-```
+![Node Detail](docs/images/node-detail.png)
 
 ---
 
-## Manual Blocklist Update
+## Statistics
 
-```bash
-bash data/update-blocklist.sh
-```
+![Statistics](docs/images/statistics.png)
 
 ---
 
-## View DNSDist Web Password
+# Roadmap
 
-```bash
-cat cache/secret.env
-```
+## Version 1.0.0
+
+- [x] Smart Installer
+- [x] Hardware Detection
+- [x] Smart Auto Tuning
+- [x] Runtime Builder
+- [x] ACL Generator
+- [x] Security Hardening
+- [x] Blocklist
+- [x] Scheduler
+- [x] Heartbeat
+- [x] Telemetry
+- [x] Dashboard
+- [x] Node Inventory
+- [x] Node Detail
+- [x] Statistics
 
 ---
 
-## Cron Schedule
+## Planned
 
-```bash
-cat /etc/cron.d/smartdns
-```
+- [ ] SmartDNS CLI
+- [ ] Update Checker
+- [ ] SmartDNS Update Command
+- [ ] Automatic Update
+- [ ] Release Channel
+
+---
+
+# Changelog
+
+See [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
 # License
 
-MIT License
-
-Presented by <a href="https://mynoc.id/" target="_blank">MyNOC.ID</a>
+This project is licensed under the MIT License.
 
 ---
 
-# Disclaimer
+# Developed By
 
-This project is intended for educational, laboratory, enterprise, ISP and self-hosted DNS environments.
+## MyNOC.ID
 
-Please test configurations in your own environment before deploying to production.
+**Network • Automation • Monitoring**
+
+Founder & Lead Developer
+
+**iChand Kusuma**
+
+GitHub
+
+https://github.com/ichandkusuma
+
+Website
+
+https://mynoc.id
+
+Email
+
+admin@mynoc.id
+
+---
+
+<div align="center">
+
+### ⭐ If SmartDNS helps your infrastructure, please consider giving this repository a Star.
+
+Made with ❤️ by **MyNOC.ID**
+
+</div>
