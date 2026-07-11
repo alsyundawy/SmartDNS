@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+sleep $(( RANDOM % 120 ))
+
 source /var/lib/smartdns/install.env
 
 source "$SMARTDNS_HOME/lib/version.sh"
