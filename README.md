@@ -80,7 +80,7 @@ Starting from **v1.0.0**, SmartDNS also includes built-in telemetry and heartbea
 |-----------|-------------|
 | CPU | 4 Core or Higher |
 | RAM | 4 GB or Higher |
-| Storage | 20 GB SSD |
+| Storage | 15 GB SSD |
 | Network | IPv4 + IPv6 |
 | OS | Ubuntu 22.04 LTS / Debian 12 |
 
@@ -265,6 +265,19 @@ View Installation Path
 cat /var/lib/smartdns/install.env
 ```
 
+View Dnsdist Web Password
+
+```bash
+cat cache/secret.env
+```
+
+View Cron
+
+```bash
+cat /etc/cron.d/smartdns
+cat /etc/cron.d/smartdns-heartbeat
+```
+
 ---
 
 # Telemetry
@@ -317,6 +330,6 @@ Always validate configurations in your own environment before deploying to produ
 
 ### ⭐ If SmartDNS helps your infrastructure, please consider giving this repository a Star.
 
-Made with ❤️ in Indonesia by **MyNOC.ID**
+Made with ❤️ in Indonesia by <a href="https://mynoc.id/" target="_blank">**MyNOC.ID**</a>
 
 </div>
