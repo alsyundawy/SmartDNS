@@ -50,7 +50,12 @@ install_heartbeat_scheduler() {
         "$BASE_DIR/templates/smartdns-heartbeat.cron" \
         /etc/cron.d/smartdns-heartbeat
 
+    chmod 644 /etc/cron.d/smartdns-heartbeat
+	
+	# Reload cron
+    systemctl reload cron >/dev/null 2>&1 || \
+    systemctl restart cron >/dev/null 2>&1
+
     success "Heartbeat scheduler installed."
 
 }
-
