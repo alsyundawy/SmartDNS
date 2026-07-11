@@ -1,3 +1,2 @@
 https://raw.githubusercontent.com/alsyundawy/TrustPositif/refs/heads/main/sunat-trustpositif.txt
 https://smartdns.mynoc.id/data/domains_isp
-https://trustpositif.komdigi.go.id/assets/db/domains_isp
