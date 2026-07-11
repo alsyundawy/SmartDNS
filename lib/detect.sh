@@ -51,7 +51,7 @@ detect_virtualization(){
             lxc)         VIRT="LXC Container" ;;
             docker)      VIRT="Docker" ;;
             openvz)      VIRT="OpenVZ" ;;
-            "")          VIRT="Bare Metal" ;;
+            none|"")     VIRT="Bare Metal" ;;
             *)           VIRT="${VIRT^^}" ;;
         esac
 

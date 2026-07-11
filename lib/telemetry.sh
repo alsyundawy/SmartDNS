@@ -85,6 +85,7 @@ build_telemetry_payload() {
     "os":"${OS:-}",
     "version":"${VERSION:-}",
     "kernel":"${KERNEL:-}",
+	"uptime":"${UPTIME:-Unknown}",
     "arch":"${CPU_ARCH:-}",
     "cpu_model":"${CPU_MODEL:-}",
     "cpu_threads":${CPU_THREADS:-0},
