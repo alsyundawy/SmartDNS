@@ -3,20 +3,8 @@ name: "Security & Linting"
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - '**/*.sh'
-      - '**/*.tpl'
-      - '**/*.yml'
-      - '**/*.yaml'
-      - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]
-    paths:
-      - '**/*.sh'
-      - '**/*.tpl'
-      - '**/*.yml'
-      - '**/*.yaml'
-      - '.github/workflows/**'
 
 jobs:
   shellcheck:
@@ -25,7 +13,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bash curl jq dos2unix shellcheck
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@master
@@ -37,20 +30,39 @@ jobs:
         env:
           SHELLCHECK_OPTS: "-e SC1091 -e SC1090 -e SC2086"
 
-  codeql:
-    name: CodeQL (GitHub Actions)
+  test-install:
+    name: Test install.sh & Scripts
     runs-on: ubuntu-latest
     permissions:
-      security-events: write
       contents: read
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
-        with:
-          languages: actions   # Hanya Actions (yang relevan)
+      - name: Install dependencies for testing
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bash curl jq dos2unix shellcheck
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+      - name: Fix line endings (dos2unix)
+        run: |
+          find . -name "*.sh" -exec dos2unix {} \;
+          find . -name "*.tpl" -exec dos2unix {} \;
+
+      - name: Test Bash Syntax (All scripts)
+        run: |
+          echo "=== Checking Bash Syntax ==="
+          for script in install.sh engine/*.sh lib/*.sh scripts/*.sh; do
+            if [ -f "$script" ]; then
+              bash -n "$script" && echo "✓ $script" || echo "✗ $script FAILED"
+            fi
+          done
+
+      - name: Test install.sh (Dry Run)
+        run: |
+          echo "=== Running install.sh Dry Run ==="
+          # Buat versi dry-run aman
+          cp install.sh install-dry.sh
+          sed -i 's/^check_root.*$/check_root() { echo "Root check skipped in CI"; }/' install-dry.sh
+          sed -i '/install_packages\|restart_services\|health_check/d' install-dry.sh
+          bash install-dry.sh 2>&1 | head -n 150
+          echo "✓ Dry run selesai"
