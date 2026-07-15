@@ -8,13 +8,13 @@ set -euo pipefail
 
 WORKDIR="/opt/blocklist"
 
-SOURCE="$WORKDIR/sources.txt"
+SOURCE="${WORKDIR}/sources.txt"
 
-FINAL="$WORKDIR/domains.txt"
+FINAL="${WORKDIR}/domains.txt"
 
-CDB_FILE="$WORKDIR/domains.cdb"
+CDB_FILE="${WORKDIR}/domains.cdb"
 
-LOG="$WORKDIR/update.log"
+LOG="${WORKDIR}/update.log"
 
 LOCKFILE="/var/run/blocklist-update.lock"
 
@@ -41,7 +41,7 @@ command -v dnsdist >/dev/null || {
 # Lock
 #########################################
 
-exec 9>"$LOCKFILE"
+exec 9>"${LOCKFILE}"
 
 flock -n 9 || {
     echo "Another update is already running."
@@ -64,10 +64,10 @@ trap 'rm -f "$RAW" "$NEW" "$TMP" "$CDB_INPUT" "$CDB_TMP"' EXIT
 # Header
 #########################################
 
-echo "======================================" | tee -a "$LOG"
-echo "Updating DNS Blocklist" | tee -a "$LOG"
-date | tee -a "$LOG"
-echo "======================================" | tee -a "$LOG"
+echo "======================================" | tee -a "${LOG}"
+echo "Updating DNS Blocklist" | tee -a "${LOG}"
+date | tee -a "${LOG}"
+echo "======================================" | tee -a "${LOG}"
 
 #########################################
 # Download Sources
@@ -77,9 +77,9 @@ SUCCESS=0
 
 while read -r URL
 do
-    [[ -z "$URL" || "$URL" =~ ^# ]] && continue
+    [[ -z "${URL}" || "${URL}" =~ ^# ]] && continue
 
-    echo "Trying $URL" | tee -a "$LOG"
+    echo "Trying ${URL}" | tee -a "${LOG}"
 
     DOWNLOAD=$(mktemp)
 
@@ -90,30 +90,30 @@ do
         --connect-timeout 10 \
         --max-time 120 \
         -fsSL \
-        "$URL" \
-        -o "$DOWNLOAD"
+        "${URL}" \
+        -o "${DOWNLOAD}"
     then
 
         # Pastikan file tidak kosong
-        if [[ -s "$DOWNLOAD" ]] && ! grep -qi "<html" "$DOWNLOAD"; then
-            cp "$DOWNLOAD" "$RAW"
+        if [[ -s "${DOWNLOAD}" ]] && ! grep -qi "<html" "${DOWNLOAD}"; then
+            cp "${DOWNLOAD}" "${RAW}"
             SUCCESS=1
-            echo "Success: $URL" | tee -a "$LOG"
-            rm -f "$DOWNLOAD"
+            echo "Success: ${URL}" | tee -a "${LOG}"
+            rm -f "${DOWNLOAD}"
             break
         fi
 
-        echo "Invalid content: $URL" | tee -a "$LOG"
+        echo "Invalid content: ${URL}" | tee -a "${LOG}"
     else
-        echo "Failed: $URL" | tee -a "$LOG"
+        echo "Failed: ${URL}" | tee -a "${LOG}"
     fi
 
-    rm -f "$DOWNLOAD"
+    rm -f "${DOWNLOAD}"
 
-done < "$SOURCE"
+done < "${SOURCE}"
 
-if [[ $SUCCESS -eq 0 ]]; then
-    echo "All sources failed." | tee -a "$LOG"
+if [[ ${SUCCESS} -eq 0 ]]; then
+    echo "All sources failed." | tee -a "${LOG}"
     exit 1
 fi
 
@@ -121,17 +121,17 @@ fi
 # Validation
 #########################################
 
-if [[ ! -s "$RAW" ]]; then
+if [[ ! -s "${RAW}" ]]; then
 
-    echo "Download failed." | tee -a "$LOG"
+    echo "Download failed." | tee -a "${LOG}"
 
     exit 1
 
 fi
 
-if grep -qi "<html" "$RAW"; then
+if grep -qi "<html" "${RAW}"; then
 
-    echo "Downloaded HTML page." | tee -a "$LOG"
+    echo "Downloaded HTML page." | tee -a "${LOG}"
 
     exit 1
 
@@ -141,21 +141,21 @@ fi
 # Extract Domains
 #########################################
 
-echo "Extracting domains..." | tee -a "$LOG"
+echo "Extracting domains..." | tee -a "${LOG}"
 
-grep -Eo '([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})' "$RAW" \
+grep -Eo '([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})' "${RAW}" \
 | sed 's/^\.//' \
 | tr '[:upper:]' '[:lower:]' \
 | sort -u \
-> "$NEW"
+> "${NEW}"
 
-COUNT=$(wc -l < "$NEW")
+COUNT=$(wc -l < "${NEW}")
 
-echo "Domains : $COUNT" | tee -a "$LOG"
+echo "Domains : ${COUNT}" | tee -a "${LOG}"
 
 if (( COUNT < 1000 )); then
 
-    echo "Blocklist too small. Update cancelled." | tee -a "$LOG"
+    echo "Blocklist too small. Update cancelled." | tee -a "${LOG}"
 
     exit 1
 
@@ -165,55 +165,55 @@ fi
 # Replace Blocklist
 #########################################
 
-mv "$NEW" "$TMP"
+mv "${NEW}" "${TMP}"
 
-TOTAL=$(wc -l < "$TMP")
+TOTAL=$(wc -l < "${TMP}")
 
-echo "Replacing blocklist ($TOTAL domains)" | tee -a "$LOG"
+echo "Replacing blocklist (${TOTAL} domains)" | tee -a "${LOG}"
 
-mv "$TMP" "$FINAL"
+mv "${TMP}" "${FINAL}"
 
 #########################################
 # Convert to CDB
 #########################################
 
-echo "Building CDB..." | tee -a "$LOG"
+echo "Building CDB..." | tee -a "${LOG}"
 
 awk '{
     print "+" length($0) ",1:" $0 "->1"
 }
 END{
     print ""
-}' "$FINAL" > "$CDB_INPUT"
+}' "${FINAL}" > "${CDB_INPUT}"
 
-cdbmake "$CDB_TMP" "$WORKDIR/cdbmake.tmp" < "$CDB_INPUT"
+cdbmake "${CDB_TMP}" "${WORKDIR}/cdbmake.tmp" < "${CDB_INPUT}"
 
-if [[ ! -s "$CDB_TMP" ]]; then
+if [[ ! -s "${CDB_TMP}" ]]; then
 
-    echo "CDB build failed." | tee -a "$LOG"
+    echo "CDB build failed." | tee -a "${LOG}"
 
     exit 1
 
 fi
 
-mv "$CDB_TMP" "$CDB_FILE"
+mv "${CDB_TMP}" "${CDB_FILE}"
 
-echo "CDB build completed." | tee -a "$LOG"
+echo "CDB build completed." | tee -a "${LOG}"
 
 #########################################
 # Reload dnsdist
 #########################################
 
-echo "Reloading dnsdist..." | tee -a "$LOG"
+echo "Reloading dnsdist..." | tee -a "${LOG}"
 
 if dnsdist -c -e "reloadConfig"
 then
 
-    echo "dnsdist reloaded." | tee -a "$LOG"
+    echo "dnsdist reloaded." | tee -a "${LOG}"
 
 else
 
-    echo "dnsdist reload failed." | tee -a "$LOG"
+    echo "dnsdist reload failed." | tee -a "${LOG}"
 
     exit 1
 
@@ -223,7 +223,7 @@ fi
 # Finish
 #########################################
 
-echo "Update completed successfully." | tee -a "$LOG"
+echo "Update completed successfully." | tee -a "${LOG}"
 
 exit 0
 

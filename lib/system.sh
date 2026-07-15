@@ -15,6 +15,6 @@ EOF
 
 check_root(){
 
-[[ $EUID -ne 0 ]] && fatal "Run as root."
+[[ ${EUID} -ne 0 ]] && fatal "Run as root."
 
 }

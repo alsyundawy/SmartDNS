@@ -21,14 +21,14 @@ PAYLOAD=""
 
 generate_uuid() {
 
-    mkdir -p "$TELEMETRY_DIR"
+    mkdir -p "${TELEMETRY_DIR}"
 
-    if [[ -s "$UUID_FILE" ]]; then
-        UUID="$(<"$UUID_FILE")"
+    if [[ -s "${UUID_FILE}" ]]; then
+        UUID="$(<"${UUID_FILE}")"
     else
         UUID="$(uuidgen)"
-        printf '%s\n' "$UUID" > "$UUID_FILE"
-        chmod 600 "$UUID_FILE"
+        printf '%s\n' "${UUID}" > "${UUID_FILE}"
+        chmod 600 "${UUID_FILE}"
     fi
 
 }
@@ -37,23 +37,24 @@ generate_uuid() {
 # Installation Metadata
 ####################################
 
+# shellcheck disable=SC2312
 init_install_metadata() {
 
-    mkdir -p "$TELEMETRY_DIR"
+    mkdir -p "${TELEMETRY_DIR}"
 
-    if [[ ! -f "$INSTALL_FILE" ]]; then
+    if [[ ! -f "${INSTALL_FILE}" ]]; then
 
-        cat > "$INSTALL_FILE" <<EOF
+        cat > "${INSTALL_FILE}" <<EOF
 {
-    "uuid":"$UUID",
-    "product":"$SMARTDNS_NAME",
-    "version":"$SMARTDNS_VERSION",
+    "uuid":"${UUID}",
+    "product":"${SMARTDNS_NAME}",
+    "version":"${SMARTDNS_VERSION}",
     "installed_at":"$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
     "telemetry":true
 }
 EOF
 
-        chmod 600 "$INSTALL_FILE"
+        chmod 600 "${INSTALL_FILE}"
 
     fi
 
@@ -63,6 +64,7 @@ EOF
 # Build Payload
 ####################################
 
+# shellcheck disable=SC2312
 build_telemetry_payload() {
 
     local DEFAULT_SPOOF_IPV4="103.151.222.227"
@@ -71,12 +73,12 @@ build_telemetry_payload() {
     local SPOOF_IPV4_DEFAULT=false
     local SPOOF_IPV6_DEFAULT=false
 
-    [[ "${SPOOF_IPV4:-}" == "$DEFAULT_SPOOF_IPV4" ]] && SPOOF_IPV4_DEFAULT=true
-    [[ "${SPOOF_IPV6:-}" == "$DEFAULT_SPOOF_IPV6" ]] && SPOOF_IPV6_DEFAULT=true
+    [[ "${SPOOF_IPV4:-}" == "${DEFAULT_SPOOF_IPV4}" ]] && SPOOF_IPV4_DEFAULT=true
+    [[ "${SPOOF_IPV6:-}" == "${DEFAULT_SPOOF_IPV6}" ]] && SPOOF_IPV6_DEFAULT=true
 
     PAYLOAD=$(cat <<EOF
 {
-  "uuid":"$UUID",
+  "uuid":"${UUID}",
   "product":"${SMARTDNS_NAME:-SmartDNS}",
   "version":"${SMARTDNS_VERSION:-unknown}",
 
@@ -148,8 +150,8 @@ send_heartbeat() {
         --retry 2 \
         --retry-delay 2 \
         --header "Content-Type: application/json" \
-        --data "$PAYLOAD" \
-        "$TELEMETRY_URL" \
+        --data "${PAYLOAD}" \
+        "${TELEMETRY_URL}" \
         >/dev/null 2>&1 || return 1
 
     return 0
@@ -162,12 +164,12 @@ send_heartbeat() {
 
 save_install_env() {
 
-    mkdir -p "$TELEMETRY_DIR"
+    mkdir -p "${TELEMETRY_DIR}"
 
-    cat > "$INSTALL_ENV" <<EOF
-SMARTDNS_HOME="$BASE_DIR"
+    cat > "${INSTALL_ENV}" <<EOF
+SMARTDNS_HOME="${BASE_DIR}"
 EOF
 
-    chmod 600 "$INSTALL_ENV"
+    chmod 600 "${INSTALL_ENV}"
 
 }

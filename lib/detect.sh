@@ -3,6 +3,7 @@
 ####################################
 # CPU
 ####################################
+# shellcheck disable=SC2312
 detect_cpu(){
 
     CPU_MODEL=$(lscpu | awk -F: '/Model name:/{
@@ -41,7 +42,7 @@ detect_virtualization(){
 
         VIRT=$(systemd-detect-virt)
 
-        case "$VIRT" in
+        case "${VIRT}" in
             kvm)         VIRT="KVM" ;;
             oracle)      VIRT="VirtualBox" ;;
             vmware)      VIRT="VMware" ;;
@@ -66,6 +67,7 @@ detect_virtualization(){
 ####################################
 # IPv4
 ####################################
+# shellcheck disable=SC2312
 detect_ipv4(){
 
     SERVER_IPV4=$(ip route get 1.1.1.1 \
@@ -87,6 +89,7 @@ detect_ipv6(){
 ####################################
 # NETWORK
 ####################################
+# shellcheck disable=SC2312
 detect_network(){
 
     DEFAULT_IF=$(ip route \
@@ -104,11 +107,11 @@ detect_network(){
 ####################################
 detect_nic_speed(){
 
-    if [[ -f /sys/class/net/$DEFAULT_IF/speed ]]; then
+    if [[ -f /sys/class/net/${DEFAULT_IF}/speed ]]; then
 
-        NIC_SPEED=$(cat /sys/class/net/$DEFAULT_IF/speed 2>/dev/null)
+        NIC_SPEED=$(cat /sys/class/net/"${DEFAULT_IF}"/speed 2>/dev/null)
 
-        [[ "$NIC_SPEED" == "-1" ]] && NIC_SPEED="Unknown"
+        [[ "${NIC_SPEED}" == "-1" ]] && NIC_SPEED="Unknown"
 
     else
 
@@ -168,6 +171,7 @@ UPTIME=$(uptime -p)
 ####################################
 # SUMMARY
 ####################################
+# shellcheck disable=SC2312
 summary(){
 
 echo
@@ -175,25 +179,25 @@ echo "======================================"
 echo "      SERVER INFORMATION"
 echo "======================================"
 
-printf "%-20s : %s\n" "Hostname" "$HOSTNAME"
-printf "%-20s : %s\n" "OS" "$OS $VERSION"
-printf "%-20s : %s\n" "Kernel" "$KERNEL"
-printf "%-20s : %s\n" "Virtualization" "$VIRT"
+printf "%-20s : %s\n" "Hostname" "${HOSTNAME}"
+printf "%-20s : %s\n" "OS" "${OS} ${VERSION}"
+printf "%-20s : %s\n" "Kernel" "${KERNEL}"
+printf "%-20s : %s\n" "Virtualization" "${VIRT}"
 
-printf "%-20s : %s\n" "CPU Model" "$CPU_MODEL"
-printf "%-20s : %s\n" "CPU Core" "$CPU_PHYSICAL"
-printf "%-20s : %s\n" "CPU Threads" "$CPU_THREADS"
-printf "%-20s : %s\n" "Architecture" "$CPU_ARCH"
+printf "%-20s : %s\n" "CPU Model" "${CPU_MODEL}"
+printf "%-20s : %s\n" "CPU Core" "${CPU_PHYSICAL}"
+printf "%-20s : %s\n" "CPU Threads" "${CPU_THREADS}"
+printf "%-20s : %s\n" "Architecture" "${CPU_ARCH}"
 
-printf "%-20s : %s GB\n" "RAM" "$(awk "BEGIN{printf \"%.1f\",$RAM_MB/1024}")"
+printf "%-20s : %s GB\n" "RAM" "$(awk "BEGIN{printf \"%.1f\",${RAM_MB}/1024}")"
 
-printf "%-20s : %s\n" "Interface" "$DEFAULT_IF"
-printf "%-20s : %s\n" "IPv4" "$SERVER_IPV4"
+printf "%-20s : %s\n" "Interface" "${DEFAULT_IF}"
+printf "%-20s : %s\n" "IPv4" "${SERVER_IPV4}"
 printf "%-20s : %s\n" "IPv6" "${SERVER_IPV6:-Not Detected}"
-printf "%-20s : %s\n" "NIC SPEED" "$NIC_SPEED"
-printf "%-20s : %s\n" "Internet" "$ONLINE"
+printf "%-20s : %s\n" "NIC SPEED" "${NIC_SPEED}"
+printf "%-20s : %s\n" "Internet" "${ONLINE}"
 
-printf "%-20s : %s\n" "Up since" "$UPTIME"
+printf "%-20s : %s\n" "Up since" "${UPTIME}"
 
 echo
 }
@@ -206,22 +210,22 @@ save_detect_cache(){
 mkdir -p /tmp/smartdns
 
 cat > /tmp/smartdns/system.env <<EOF
-HOSTNAME=$HOSTNAME
-OS=$OS
-VERSION=$VERSION
-VIRT=$VIRT
-CPU_MODEL=$CPU_MODEL
-CPU_THREADS=$CPU_THREADS
-CPU_ARCH=$CPU_ARCH
-RAM_MB=$RAM_MB
-RAM_GB=$RAM_GB
-DEFAULT_IF=$DEFAULT_IF
-SERVER_IPV4=$SERVER_IPV4
-SERVER_IPV6=$SERVER_IPV6
-NIC_SPEED=$NIC_SPEED
-ONLINE=$ONLINE
-KERNEL=$KERNEL
-UPTIME=$UPTIME
+HOSTNAME=${HOSTNAME}
+OS=${OS}
+VERSION=${VERSION}
+VIRT=${VIRT}
+CPU_MODEL=${CPU_MODEL}
+CPU_THREADS=${CPU_THREADS}
+CPU_ARCH=${CPU_ARCH}
+RAM_MB=${RAM_MB}
+RAM_GB=${RAM_GB}
+DEFAULT_IF=${DEFAULT_IF}
+SERVER_IPV4=${SERVER_IPV4}
+SERVER_IPV6=${SERVER_IPV6}
+NIC_SPEED=${NIC_SPEED}
+ONLINE=${ONLINE}
+KERNEL=${KERNEL}
+UPTIME=${UPTIME}
 EOF
 
 }

@@ -1,7 +1,7 @@
 
 <div align="center">
 
-<img src="docs/images/banner.png" width="100%">
+<img src="docs/images/banner.png" width="100%" alt="SmartDNS Banner">
 
 # SmartDNS
 

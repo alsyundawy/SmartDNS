@@ -15,19 +15,22 @@ BACKUP_DIR="/var/backups/smartdns"
 
 backup_config(){
 
-    mkdir -p "$BACKUP_DIR"
+    local now
+    now=$(date +%F-%H%M%S)
 
-	if [[ -f "$UNBOUND_DIR/smartdns.conf" ]]; then
+    mkdir -p "${BACKUP_DIR}"
 
-		cp "$UNBOUND_DIR/smartdns.conf" \
-		   "$BACKUP_DIR/smartdns.conf.$(date +%F-%H%M%S)"
+	if [[ -f "${UNBOUND_DIR}/smartdns.conf" ]]; then
+
+		cp "${UNBOUND_DIR}/smartdns.conf" \
+		   "${BACKUP_DIR}/smartdns.conf.${now}"
 
 	fi
 
-    if [[ -f "$DNSDIST_DIR/dnsdist.conf" ]]; then
+    if [[ -f "${DNSDIST_DIR}/dnsdist.conf" ]]; then
 
-        cp "$DNSDIST_DIR/dnsdist.conf" \
-           "$BACKUP_DIR/dnsdist.conf.$(date +%F-%H%M%S)"
+        cp "${DNSDIST_DIR}/dnsdist.conf" \
+           "${BACKUP_DIR}/dnsdist.conf.${now}"
 
     fi
 
@@ -41,13 +44,13 @@ backup_config(){
 
 install_config(){
 
-	cp output/recursive.conf "$UNBOUND_DIR/smartdns.conf"
+	cp output/recursive.conf "${UNBOUND_DIR}/smartdns.conf"
 
 	echo "===== INSTALLED ====="
-	grep -n "auto-trust-anchor-file" "$UNBOUND_DIR/smartdns.conf"
+	grep -n "auto-trust-anchor-file" "${UNBOUND_DIR}/smartdns.conf"
 	echo "====================="
 
-    cp output/dnsdist.conf "$DNSDIST_DIR/dnsdist.conf"
+    cp output/dnsdist.conf "${DNSDIST_DIR}/dnsdist.conf"
 
     success "Configuration installed."
 
@@ -97,15 +100,16 @@ health_check() {
 
     local DNS_TARGET
 
-    if [[ "$ENABLE_IPV6" == "yes" ]]; then
+    if [[ "${ENABLE_IPV6}" == "yes" ]]; then
         DNS_TARGET="::1"
     else
         DNS_TARGET="127.0.0.1"
     fi
 
-    for i in {1..15}; do
+    for _ in {1..15}; do
 
-        if dig @"$DNS_TARGET" google.com +short 2>/dev/null | grep -q .; then
+        # shellcheck disable=SC2312
+        if dig @"${DNS_TARGET}" google.com +short 2>/dev/null | grep -q .; then
             success "DNS Resolver is working."
             return 0
         fi
@@ -121,24 +125,26 @@ rollback_config(){
 
     warn "Rollback configuration..."
 
+    # shellcheck disable=SC2012,SC2312
     LATEST_UNBOUND=$(ls -t /var/backups/smartdns/smartdns.conf* 2>/dev/null | head -1)
 
-    if [[ -n "$LATEST_UNBOUND" ]]
+    if [[ -n "${LATEST_UNBOUND}" ]]
 
     then
 
-        cp "$LATEST_UNBOUND" \
+        cp "${LATEST_UNBOUND}" \
            /etc/unbound/unbound.conf.d/smartdns.conf
 
     fi
 
+    # shellcheck disable=SC2012,SC2312
     LATEST_DNSDIST=$(ls -t /var/backups/smartdns/dnsdist.conf* 2>/dev/null | head -1)
 
-    if [[ -n "$LATEST_DNSDIST" ]]
+    if [[ -n "${LATEST_DNSDIST}" ]]
 
     then
 
-        cp "$LATEST_DNSDIST" \
+        cp "${LATEST_DNSDIST}" \
            /etc/dnsdist/dnsdist.conf
 
     fi

@@ -8,33 +8,33 @@ BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Libraries
 ####################################
 
-source "$BASE_DIR/lib/colors.sh"
-source "$BASE_DIR/lib/logger.sh"
-source "$BASE_DIR/lib/system.sh"
-source "$BASE_DIR/lib/validate.sh"
-source "$BASE_DIR/lib/detect.sh"
-source "$BASE_DIR/lib/version.sh"
-source "$BASE_DIR/lib/telemetry.sh"
+source "${BASE_DIR}/lib/colors.sh"
+source "${BASE_DIR}/lib/logger.sh"
+source "${BASE_DIR}/lib/system.sh"
+source "${BASE_DIR}/lib/validate.sh"
+source "${BASE_DIR}/lib/detect.sh"
+source "${BASE_DIR}/lib/version.sh"
+source "${BASE_DIR}/lib/telemetry.sh"
 
 ####################################
 # Engine
 ####################################
 
-source "$BASE_DIR/engine/tuning.sh"
-source "$BASE_DIR/engine/template.sh"
-source "$BASE_DIR/engine/runtime.sh"
-source "$BASE_DIR/engine/render.sh"
-source "$BASE_DIR/engine/package.sh"
-source "$BASE_DIR/engine/service.sh"
-source "$BASE_DIR/engine/wizard.sh"
-source "$BASE_DIR/engine/acl.sh"
-source "$BASE_DIR/engine/security.sh"
-source "$BASE_DIR/engine/state.sh"
-source "$BASE_DIR/engine/blocklist.sh"
-source "$BASE_DIR/engine/secret.sh"
-source "$BASE_DIR/engine/cron.sh"
-source "$BASE_DIR/engine/swap.sh"
-source "$BASE_DIR/engine/sysctl.sh"
+source "${BASE_DIR}/engine/tuning.sh"
+source "${BASE_DIR}/engine/template.sh"
+source "${BASE_DIR}/engine/runtime.sh"
+source "${BASE_DIR}/engine/render.sh"
+source "${BASE_DIR}/engine/package.sh"
+source "${BASE_DIR}/engine/service.sh"
+source "${BASE_DIR}/engine/wizard.sh"
+source "${BASE_DIR}/engine/acl.sh"
+source "${BASE_DIR}/engine/security.sh"
+source "${BASE_DIR}/engine/state.sh"
+source "${BASE_DIR}/engine/blocklist.sh"
+source "${BASE_DIR}/engine/secret.sh"
+source "${BASE_DIR}/engine/cron.sh"
+source "${BASE_DIR}/engine/swap.sh"
+source "${BASE_DIR}/engine/sysctl.sh"
 
 ####################################
 # Banner
@@ -159,7 +159,7 @@ read -rp "Install required packages? [Y/n] : " INSTALL_PACKAGE
 
 INSTALL_PACKAGE=${INSTALL_PACKAGE:-Y}
 
-if [[ "$INSTALL_PACKAGE" =~ ^[Yy]$ ]]; then
+if [[ "${INSTALL_PACKAGE}" =~ ^[Yy]$ ]]; then
 
 	if command -v timedatectl >/dev/null 2>&1; then
 		info "Setting Timezone..."

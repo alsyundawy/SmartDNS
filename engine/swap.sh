@@ -6,6 +6,7 @@
 
 install_swap() {
 
+    # shellcheck disable=SC2312
     if swapon --show | grep -q .; then
         success "Swap already enabled."
         return
@@ -19,6 +20,7 @@ install_swap() {
 
     MEM_GB=$(awk '/MemTotal/ {printf "%.0f",$2/1024/1024}' /proc/meminfo)
 
+    # shellcheck disable=SC2312
     DISK_GB=$(df --output=size -BG / | tail -1 | tr -dc '0-9')
 
     ################################################
@@ -51,7 +53,7 @@ install_swap() {
     # Create Swap
     ################################################
 
-    fallocate -l "$SWAP_SIZE" /swapfile \
+    fallocate -l "${SWAP_SIZE}" /swapfile \
         || dd if=/dev/zero of=/swapfile bs=1M count=$(( ${SWAP_SIZE%G} * 1024 ))
 
     chmod 600 /swapfile
@@ -63,6 +65,6 @@ install_swap() {
     grep -q '^/swapfile' /etc/fstab \
         || echo '/swapfile none swap sw 0 0' >> /etc/fstab
 
-    success "Swap $SWAP_SIZE enabled."
+    success "Swap ${SWAP_SIZE} enabled."
 
 }

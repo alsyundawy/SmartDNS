@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 success(){
 
     echo -e "${GREEN}[ OK ]${NC} $1"

@@ -10,7 +10,7 @@ save_state(){
 
     mkdir -p cache
 
-    echo "$1" > "$STATE_FILE"
+    echo "$1" > "${STATE_FILE}"
 
 }
 
@@ -20,9 +20,9 @@ save_state(){
 
 get_state(){
 
-    [[ -f "$STATE_FILE" ]] || return
+    [[ -f "${STATE_FILE}" ]] || return
 
-    cat "$STATE_FILE"
+    cat "${STATE_FILE}"
 
 }
 

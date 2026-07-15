@@ -10,9 +10,9 @@ render_variable(){
     local KEY="$2"
     local VALUE="$3"
 
-    VALUE=$(printf '%s\n' "$VALUE" | sed 's/[\/&]/\\&/g')
+    VALUE=$(printf '%s\n' "${VALUE}" | sed 's/[\/&]/\\&/g')
 
-    sed -i "s|{{$KEY}}|$VALUE|g" "$FILE"
+    sed -i "s|{{${KEY}}}|${VALUE}|g" "${FILE}"
 
 }
 
@@ -26,11 +26,11 @@ render_block(){
     local KEY="$2"
     local CONTENT="$3"
 
-    awk -v block="$CONTENT" \
-        "{gsub(\"{{$KEY}}\",block)}1" \
-        "$FILE" > "${FILE}.tmp"
+    awk -v block="${CONTENT}" \
+        "{gsub(\"{{${KEY}}}\",block)}1" \
+        "${FILE}" > "${FILE}.tmp"
 
-    mv "${FILE}.tmp" "$FILE"
+    mv "${FILE}.tmp" "${FILE}"
 
 }
 

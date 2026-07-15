@@ -22,7 +22,7 @@ run_wizard(){
 
     if [[ -n "${SERVER_IPV6:-}" ]]; then
         ENABLE_IPV6="yes"
-        IPV6_STATUS="$SERVER_IPV6"
+        IPV6_STATUS="${SERVER_IPV6}"
     else
         ENABLE_IPV6="no"
         IPV6_STATUS="Not Detected"
@@ -44,24 +44,26 @@ run_wizard(){
     echo "======================================"
     echo
 
-    printf "%-20s : %s\n" "Hostname" "$HOSTNAME"
-    printf "%-20s : %s\n" "OS" "$OS $VERSION"
-    printf "%-20s : %s Core\n" "CPU" "$CPU_THREADS"
-    printf "%-20s : %.1f GB\n" "RAM" "$(awk "BEGIN{printf \"%.1f\", $RAM_MB/1024}")"
-    printf "%-20s : %s\n" "IPv4" "$SERVER_IPV4"
-    printf "%-20s : %s\n" "IPv6" "$IPV6_STATUS"
+    printf "%-20s : %s\n" "Hostname" "${HOSTNAME}"
+    printf "%-20s : %s\n" "OS" "${OS} ${VERSION}"
+    printf "%-20s : %s Core\n" "CPU" "${CPU_THREADS}"
+    # shellcheck disable=SC2312
+    printf "%-20s : %.1f GB\n" "RAM" "$(awk "BEGIN{printf \"%.1f\", ${RAM_MB}/1024}")"
+    # shellcheck disable=SC2153
+    printf "%-20s : %s\n" "IPv4" "${SERVER_IPV4}"
+    printf "%-20s : %s\n" "IPv6" "${IPV6_STATUS}"
 
     echo
     echo "--------------------------------------"
     echo " Auto Configuration"
     echo "--------------------------------------"
 
-    printf "%-20s : %s\n" "Unbound Threads" "$UNBOUND_THREADS"
-    printf "%-20s : %s\n" "DNSSEC" "$DNSSEC_STATUS"
-    printf "%-20s : %s\n" "Rate Limit" "$RATELIMIT_STATUS"
-    printf "%-20s : %s\n" "Query Log" "$QUERYLOG_STATUS"
-    printf "%-20s : %s\n" "Recursive Port" "$RECURSIVE_PORT"
-    printf "%-20s : %s\n" "Frontend Port" "$FRONTEND_PORT"
+    printf "%-20s : %s\n" "Unbound Threads" "${UNBOUND_THREADS}"
+    printf "%-20s : %s\n" "DNSSEC" "${DNSSEC_STATUS}"
+    printf "%-20s : %s\n" "Rate Limit" "${RATELIMIT_STATUS}"
+    printf "%-20s : %s\n" "Query Log" "${QUERYLOG_STATUS}"
+    printf "%-20s : %s\n" "Recursive Port" "${RECURSIVE_PORT}"
+    printf "%-20s : %s\n" "Frontend Port" "${FRONTEND_PORT}"
 
     echo
 
@@ -101,7 +103,7 @@ run_wizard(){
 				while true
 				do
 
-					RECURSIVE_PORT=$(ask_recursive_port "Recursive Port [$RECURSIVE_PORT] :" "$RECURSIVE_PORT")
+					RECURSIVE_PORT=$(ask_recursive_port "Recursive Port [${RECURSIVE_PORT}] :" "${RECURSIVE_PORT}")
 					
 					if (( RECURSIVE_PORT == 53 )); then
 						warn "Recursive Port cannot use port 53."
@@ -119,10 +121,10 @@ run_wizard(){
 				while true
 				do
 
-					FRONTEND_PORT=$(ask_frontend_port "Frontend Port [$FRONTEND_PORT] :" "$FRONTEND_PORT")
+					FRONTEND_PORT=$(ask_frontend_port "Frontend Port [${FRONTEND_PORT}] :" "${FRONTEND_PORT}")
 
-					if [[ "$FRONTEND_PORT" == "$RECURSIVE_PORT" ]]; then
-						warn "Frontend Port cannot be the same as Recursive Port ($RECURSIVE_PORT)."
+					if [[ "${FRONTEND_PORT}" == "${RECURSIVE_PORT}" ]]; then
+						warn "Frontend Port cannot be the same as Recursive Port (${RECURSIVE_PORT})."
 						continue
 					fi
 
@@ -132,12 +134,12 @@ run_wizard(){
 				
 				while true
 				do
-					read -rp "Spoof IPv4 [$SPOOF_IPV4] : " TMP
+					read -rp "Spoof IPv4 [${SPOOF_IPV4}] : " TMP
 
-					TMP=${TMP:-$SPOOF_IPV4}
+					TMP=${TMP:-${SPOOF_IPV4}}
 
-					if validate_ipv4 "$TMP"; then
-						SPOOF_IPV4="$TMP"
+					if validate_ipv4 "${TMP}"; then
+						SPOOF_IPV4="${TMP}"
 						break
 					fi
 
@@ -145,16 +147,16 @@ run_wizard(){
 
 				done
 
-				if [[ "$ENABLE_IPV6" == "yes" ]]; then
+				if [[ "${ENABLE_IPV6}" == "yes" ]]; then
 
 					while true
 					do
-						read -rp "Spoof IPv6 [$SPOOF_IPV6] : " TMP
+						read -rp "Spoof IPv6 [${SPOOF_IPV6}] : " TMP
 
-						TMP=${TMP:-$SPOOF_IPV6}
+						TMP=${TMP:-${SPOOF_IPV6}}
 
-						if validate_ipv6 "$TMP"; then
-							SPOOF_IPV6="$TMP"
+						if validate_ipv6 "${TMP}"; then
+							SPOOF_IPV6="${TMP}"
 							break
 						fi
 
@@ -169,7 +171,8 @@ run_wizard(){
 				read -rsp "DNSDist Web Password (ENTER = Auto Generate) : " TMP
 				echo
 
-				DNSDIST_WEB_PASSWORD="$TMP"
+				# shellcheck disable=SC2034
+				DNSDIST_WEB_PASSWORD="${TMP}"
 
 
                 break
@@ -189,14 +192,14 @@ run_wizard(){
     #################################
 
     cat > cache/wizard.env <<EOF
-ENABLE_IPV6=$ENABLE_IPV6
-ENABLE_DNSSEC=$ENABLE_DNSSEC
-ENABLE_RATELIMIT=$ENABLE_RATELIMIT
-ENABLE_QUERYLOG=$ENABLE_QUERYLOG
-RECURSIVE_PORT=$RECURSIVE_PORT
-FRONTEND_PORT=$FRONTEND_PORT
-SPOOF_IPV4=$SPOOF_IPV4
-SPOOF_IPV6=$SPOOF_IPV6
+ENABLE_IPV6=${ENABLE_IPV6}
+ENABLE_DNSSEC=${ENABLE_DNSSEC}
+ENABLE_RATELIMIT=${ENABLE_RATELIMIT}
+ENABLE_QUERYLOG=${ENABLE_QUERYLOG}
+RECURSIVE_PORT=${RECURSIVE_PORT}
+FRONTEND_PORT=${FRONTEND_PORT}
+SPOOF_IPV4=${SPOOF_IPV4}
+SPOOF_IPV6=${SPOOF_IPV6}
 EOF
 
     success "Wizard completed."

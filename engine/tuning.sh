@@ -18,7 +18,7 @@ next_power_of_two() {
         p=$((p*2))
     done
 
-    echo "$p"
+    echo "${p}"
 
 }
 
@@ -28,10 +28,7 @@ next_power_of_two() {
 
 tuning_unbound(){
 
-    #################################
-    # THREAD
-    #################################
-
+    # shellcheck disable=SC2153
     if (( CPU_THREADS <= 2 )); then
 
         UNBOUND_THREADS=2
@@ -111,7 +108,7 @@ fi
     # SLABS
     #################################
 
-    SLABS=$(next_power_of_two "$UNBOUND_THREADS")
+    SLABS=$(next_power_of_two "${UNBOUND_THREADS}")
 
     ((SLABS>32)) && SLABS=32
 
@@ -252,7 +249,7 @@ fi
 
 tuning_network(){
 
-    if [[ -n "$SERVER_IPV6" ]]
+    if [[ -n "${SERVER_IPV6}" ]]
 
     then
 
@@ -289,20 +286,20 @@ save_tuning(){
 mkdir -p /tmp/smartdns
 
 cat > /tmp/smartdns/tuning.env <<EOF
-UNBOUND_THREADS=$UNBOUND_THREADS
-RRSET_CACHE=$RRSET_CACHE
-MSG_CACHE=$MSG_CACHE
-SLABS=$SLABS
-OUTGOING_RANGE=$OUTGOING_RANGE
-NUM_QUERIES=$NUM_QUERIES
-INFRA_CACHE=$INFRA_CACHE
+UNBOUND_THREADS=${UNBOUND_THREADS}
+RRSET_CACHE=${RRSET_CACHE}
+MSG_CACHE=${MSG_CACHE}
+SLABS=${SLABS}
+OUTGOING_RANGE=${OUTGOING_RANGE}
+NUM_QUERIES=${NUM_QUERIES}
+INFRA_CACHE=${INFRA_CACHE}
 
-DNSDIST_CACHE=$DNSDIST_CACHE
-TCP_THREADS=$TCP_THREADS
-TCP_QUEUE=$TCP_QUEUE
-UDP_OUTSTANDING=$UDP_OUTSTANDING
+DNSDIST_CACHE=${DNSDIST_CACHE}
+TCP_THREADS=${TCP_THREADS}
+TCP_QUEUE=${TCP_QUEUE}
+UDP_OUTSTANDING=${UDP_OUTSTANDING}
 
-IPV6_AVAILABLE=$IPV6_AVAILABLE
+IPV6_AVAILABLE=${IPV6_AVAILABLE}
 EOF
 
 }
@@ -318,24 +315,24 @@ echo "======================================"
 echo " SMART TUNING RESULT"
 echo "======================================"
 
-printf "%-25s : %s\n" "Threads" "$UNBOUND_THREADS"
-printf "%-25s : %s\n" "RRSET Cache" "$RRSET_CACHE"
-printf "%-25s : %s\n" "MSG Cache" "$MSG_CACHE"
-printf "%-25s : %s\n" "Slabs" "$SLABS"
-printf "%-25s : %s\n" "Outgoing Range" "$OUTGOING_RANGE"
-printf "%-25s : %s\n" "Queries / Thread" "$NUM_QUERIES"
-printf "%-25s : %s\n" "Infra Cache" "$INFRA_CACHE"
+printf "%-25s : %s\n" "Threads" "${UNBOUND_THREADS}"
+printf "%-25s : %s\n" "RRSET Cache" "${RRSET_CACHE}"
+printf "%-25s : %s\n" "MSG Cache" "${MSG_CACHE}"
+printf "%-25s : %s\n" "Slabs" "${SLABS}"
+printf "%-25s : %s\n" "Outgoing Range" "${OUTGOING_RANGE}"
+printf "%-25s : %s\n" "Queries / Thread" "${NUM_QUERIES}"
+printf "%-25s : %s\n" "Infra Cache" "${INFRA_CACHE}"
 
 echo
 
-printf "%-25s : %s\n" "Packet Cache" "$DNSDIST_CACHE"
-printf "%-25s : %s\n" "TCP Threads" "$TCP_THREADS"
-printf "%-25s : %s\n" "TCP Queue" "$TCP_QUEUE"
-printf "%-25s : %s\n" "UDP Outstanding" "$UDP_OUTSTANDING"
+printf "%-25s : %s\n" "Packet Cache" "${DNSDIST_CACHE}"
+printf "%-25s : %s\n" "TCP Threads" "${TCP_THREADS}"
+printf "%-25s : %s\n" "TCP Queue" "${TCP_QUEUE}"
+printf "%-25s : %s\n" "UDP Outstanding" "${UDP_OUTSTANDING}"
 
 echo
 
-printf "%-25s : %s\n" "IPv6 Available" "$IPV6_AVAILABLE"
+printf "%-25s : %s\n" "IPv6 Available" "${IPV6_AVAILABLE}"
 
 echo
 

@@ -30,7 +30,7 @@ EOF
     systemctl restart cron >/dev/null 2>&1
 
     success "Scheduler installed."
-    info "Daily update scheduled at $(printf "%02d:%02d" "$HOUR" "$MINUTE") + random delay (0-30 minutes)."
+    info "Daily update scheduled at $(printf "%02d:%02d" "${HOUR}" "${MINUTE}") + random delay (0-30 minutes)."
 
 }
 
@@ -43,11 +43,11 @@ install_heartbeat_scheduler() {
     info "Installing Heartbeat Scheduler..."
 
     install -Dm755 \
-        "$BASE_DIR/scripts/smartdns-heartbeat" \
+        "${BASE_DIR}/scripts/smartdns-heartbeat" \
         /usr/local/bin/smartdns-heartbeat
 
     install -Dm644 \
-        "$BASE_DIR/templates/smartdns-heartbeat.cron" \
+        "${BASE_DIR}/templates/smartdns-heartbeat.cron" \
         /etc/cron.d/smartdns-heartbeat
 
     chmod 644 /etc/cron.d/smartdns-heartbeat

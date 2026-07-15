@@ -93,15 +93,15 @@ install_packages(){
     for PKG in "${PACKAGES[@]}"
     do
 
-        if is_installed "$PKG"; then
+        if is_installed "${PKG}"; then
 
-            success "$PKG already installed"
+            success "${PKG} already installed"
 
         else
 
-            warn "$PKG missing"
+            warn "${PKG} missing"
 
-            MISSING_PACKAGES+=("$PKG")
+            MISSING_PACKAGES+=("${PKG}")
 
         fi
 
@@ -163,10 +163,10 @@ verify_packages() {
         ca-certificates \
         freecdb
     do
-        if dpkg -s "$PKG" >/dev/null 2>&1; then
-            success "$PKG installed"
+        if dpkg -s "${PKG}" >/dev/null 2>&1; then
+            success "${PKG} installed"
         else
-            error "$PKG missing"
+            error "${PKG} missing"
             FAILED=1
         fi
     done

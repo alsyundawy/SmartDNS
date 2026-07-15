@@ -4,8 +4,10 @@
 # SmartDNS Version
 ####################################
 
+# shellcheck disable=SC2034
 SMARTDNS_NAME="SmartDNS"
 
+# shellcheck disable=SC2034
 SMARTDNS_VERSION="unknown"
 
 get_version() {
@@ -18,8 +20,8 @@ get_version() {
         VERSION_PATH="${BASE_DIR}/VERSION"
     fi
 
-    if [[ -r "$VERSION_PATH" ]]; then
-        SMARTDNS_VERSION="$(tr -d '\r\n' < "$VERSION_PATH")"
+    if [[ -r "${VERSION_PATH}" ]]; then
+        SMARTDNS_VERSION="$(tr -d '\r\n' < "${VERSION_PATH}")"
     fi
 
 }

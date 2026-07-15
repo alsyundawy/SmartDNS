@@ -12,21 +12,21 @@ BLOCKLIST_DIR="/opt/blocklist"
 
 install_blocklist(){
 
-    mkdir -p "$BLOCKLIST_DIR"
+    mkdir -p "${BLOCKLIST_DIR}"
 
     command -v cdbmake >/dev/null 2>&1 || fatal "tinycdb not installed"
 
     cp data/sources.txt \
-       "$BLOCKLIST_DIR/sources.txt"
+       "${BLOCKLIST_DIR}/sources.txt"
 
     cp data/update-blocklist.sh \
-       "$BLOCKLIST_DIR/update-blocklist.sh"
+       "${BLOCKLIST_DIR}/update-blocklist.sh"
 
-    chmod +x "$BLOCKLIST_DIR/update-blocklist.sh"
+    chmod +x "${BLOCKLIST_DIR}/update-blocklist.sh"
 
     info "Generating initial blocklist..."
 
-    "$BLOCKLIST_DIR/update-blocklist.sh"
+    "${BLOCKLIST_DIR}/update-blocklist.sh"
 
     success "Blocklist installed."
 

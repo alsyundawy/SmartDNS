@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# shellcheck disable=SC2034
 detect_os(){
 
 if [[ ! -f /etc/os-release ]]; then
@@ -8,12 +9,13 @@ if [[ ! -f /etc/os-release ]]; then
 
 fi
 
+# shellcheck source=/dev/null
 source /etc/os-release
 
-OS="$NAME"
-VERSION="$VERSION_ID"
+OS="${NAME}"
+VERSION="${VERSION_ID}"
 
-case "$ID" in
+case "${ID}" in
 
 ubuntu|debian)
 ;;
@@ -33,9 +35,9 @@ ask_yes_no(){
 
     while true
     do
-        read -rp "$PROMPT " ANSWER
+        read -rp "${PROMPT} " ANSWER
 
-        ANSWER=${ANSWER:-$DEFAULT}
+        ANSWER=${ANSWER:-${DEFAULT}}
 
         case "${ANSWER^^}" in
             Y|YES)
@@ -65,13 +67,13 @@ ask_number(){
     while true
     do
 
-        read -rp "$PROMPT " ANSWER
+        read -rp "${PROMPT} " ANSWER
 
-        ANSWER=${ANSWER:-$DEFAULT}
+        ANSWER=${ANSWER:-${DEFAULT}}
 
-        [[ "$ANSWER" =~ ^[0-9]+$ ]] && {
+        [[ "${ANSWER}" =~ ^[0-9]+$ ]] && {
 
-            echo "$ANSWER"
+            echo "${ANSWER}"
             return
 
         }
@@ -90,10 +92,10 @@ ask_recursive_port(){
 
     while true
     do
-        PORT=$(ask_number "$PROMPT" "$DEFAULT")
+        PORT=$(ask_number "${PROMPT}" "${DEFAULT}")
 
         if (( PORT >= 1024 && PORT <= 65535 )); then
-            echo "$PORT"
+            echo "${PORT}"
             return
         fi
 
@@ -111,15 +113,15 @@ ask_frontend_port(){
 
     while true
     do
-        PORT=$(ask_number "$PROMPT" "$DEFAULT")
+        PORT=$(ask_number "${PROMPT}" "${DEFAULT}")
 
         if (( PORT == 53 )); then
-            echo "$PORT"
+            echo "${PORT}"
             return
         fi
 
         if (( PORT >= 1024 && PORT <= 65535 )); then
-            echo "$PORT"
+            echo "${PORT}"
             return
         fi
 
@@ -134,7 +136,7 @@ validate_ports(){
     local RECURSIVE="$1"
     local FRONTEND="$2"
 
-    [[ "$RECURSIVE" != "$FRONTEND" ]]
+    [[ "${RECURSIVE}" != "${FRONTEND}" ]]
 
 }
 
@@ -149,9 +151,9 @@ ask_cidr(){
     while true
     do
 
-        read -rp "$PROMPT " CIDR
+        read -rp "${PROMPT} " CIDR
 
-        [[ -z "$CIDR" ]] && {
+        [[ -z "${CIDR}" ]] && {
             echo ""
             return
         }
@@ -160,9 +162,9 @@ ask_cidr(){
         # IPv4
         ################################
 
-        if [[ "$CIDR" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$ ]]; then
+        if [[ "${CIDR}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$ ]]; then
 
-            echo "$CIDR"
+            echo "${CIDR}"
 
             return
 
@@ -172,9 +174,9 @@ ask_cidr(){
         # IPv6
         ################################
 
-        if [[ "$CIDR" =~ : ]] && [[ "$CIDR" =~ /([0-9]|[1-9][0-9]|1[01][0-9]|12[0-8])$ ]]; then
+        if [[ "${CIDR}" =~ : ]] && [[ "${CIDR}" =~ /([0-9]|[1-9][0-9]|1[01][0-9]|12[0-8])$ ]]; then
 
-            echo "$CIDR"
+            echo "${CIDR}"
 
             return
 
@@ -193,11 +195,11 @@ validate_ipv4(){
 
     local ip="$1"
 
-    [[ $ip =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+    [[ ${ip} =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
 
-    IFS=. read -r a b c d <<<"$ip"
+    IFS=. read -r a b c d <<<"${ip}"
 
-    for i in "$a" "$b" "$c" "$d"
+    for i in "${a}" "${b}" "${c}" "${d}"
     do
         ((i>=0 && i<=255)) || return 1
     done
@@ -218,13 +220,13 @@ validate_ipv6(){
 
         python3 - <<EOF >/dev/null 2>&1
 import ipaddress
-ipaddress.IPv6Address("$ip")
+ipaddress.IPv6Address("${ip}")
 EOF
 
         return $?
 
     fi
 
-    [[ "$ip" == *:* ]]
+    [[ "${ip}" == *:* ]]
 
 }

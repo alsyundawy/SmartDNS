@@ -4,14 +4,16 @@ set -euo pipefail
 
 sleep $(( RANDOM % 120 ))
 
+# shellcheck source=/dev/null
 source /var/lib/smartdns/install.env
 
-source "$SMARTDNS_HOME/lib/version.sh"
-source "$SMARTDNS_HOME/lib/detect.sh"
-source "$SMARTDNS_HOME/lib/validate.sh"
-source "$SMARTDNS_HOME/lib/system.sh"
-source "$SMARTDNS_HOME/lib/telemetry.sh"
-source "$SMARTDNS_HOME/cache/runtime.env"
+source "${SMARTDNS_HOME}/lib/version.sh"
+source "${SMARTDNS_HOME}/lib/detect.sh"
+source "${SMARTDNS_HOME}/lib/validate.sh"
+source "${SMARTDNS_HOME}/lib/system.sh"
+source "${SMARTDNS_HOME}/lib/telemetry.sh"
+# shellcheck source=/dev/null
+source "${SMARTDNS_HOME}/cache/runtime.env"
 
 # Refresh system information
 detect_os

@@ -10,7 +10,7 @@ run_acl(){
 
     ACL_FILE="cache/acl.list"
 
-    cat > "$ACL_FILE" <<EOF
+    cat > "${ACL_FILE}" <<EOF
 127.0.0.0/8
 ::1/128
 EOF
@@ -31,9 +31,9 @@ EOF
 
         CIDR=$(ask_cidr "Add Resolver CIDR (ENTER = Finish) :")
 
-        [[ -z "$CIDR" ]] && break
+        [[ -z "${CIDR}" ]] && break
 
-        if grep -qx "$CIDR" "$ACL_FILE"; then
+        if grep -qx "${CIDR}" "${ACL_FILE}"; then
 
             warn "ACL already exists."
 
@@ -41,9 +41,9 @@ EOF
 
         fi
 
-        echo "$CIDR" >> "$ACL_FILE"
+        echo "${CIDR}" >> "${ACL_FILE}"
 
-        success "Added $CIDR"
+        success "Added ${CIDR}"
 
     done
 
