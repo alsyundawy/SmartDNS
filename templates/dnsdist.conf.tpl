@@ -1,6 +1,6 @@
 -- Listen DNS
 addLocal("0.0.0.0:{{FRONTEND_PORT}}")
-addLocal("[::]:{{FRONTEND_PORT}}")
+{{IPV6_FRONTEND}}
 
 -- Console
 setKey("{{DNSDIST_KEY}}")
@@ -20,10 +20,7 @@ newServer({
     name="unbound-v4"
 })
 
-newServer({
-    address="[::1]:{{RECURSIVE_PORT}}",
-    name="unbound-v6"
-})
+{{IPV6_BACKEND}}
 
 setServerPolicy(leastOutstanding)
 

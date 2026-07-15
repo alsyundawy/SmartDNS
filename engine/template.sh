@@ -1,13 +1,19 @@
 #!/usr/bin/env bash
 #
 # CHANGELOG:
-# Standardized variable expansion by consistently using ${VAR} across all shell
-# scripts to improve readability, consistency, and safety. This follows shell
-# scripting best practices and helps prevent issues related to word splitting
-# and pathname expansion (globbing). Additionally, fixed ShellCheck warnings,
-# corrected Markdown formatting errors, added appropriate ShellCheck directives,
-# removed unused color variables, improved shebang declarations, and performed
-# general code quality and maintainability improvements.
+# - Standardized variable expansion by consistently using ${VAR} across all shell
+#   scripts to improve readability, consistency, and safety.
+# - Fixed ShellCheck warnings.
+# - Corrected Markdown formatting errors.
+# - Added appropriate ShellCheck directives and disabled SC2312/SC2153/SC2034 where safe.
+# - Removed unused color variables and IPV6_INTERFACE assignments.
+# - Improved shebang declarations.
+# - Expanded OS support to Ubuntu 22.04, 24.04, 26.04 and Debian 11, 12, 13.
+# - Optimized package installation sequence to resolve port 53 bind conflicts.
+# - Corrected dynamic IPv6 frontend and backend rendering in dnsdist templates.
+# - Sourced LC_ALL=C locale execution for consistent English command output parsing.
+# - Improved telemetry UUID generation with stable kernel-based /proc/sys/kernel/random/uuid fallback.
+# - Pointed cron updater scheduler to permanent /opt/blocklist/update-blocklist.sh script.
 #
 
 ####################################
@@ -100,10 +106,11 @@ build_dnsdist_ipv6(){
 
     if [[ "${ENABLE_IPV6}" == "yes" ]]; then
 
-        DNSDIST_IPV6_FRONTEND='setLocal("[::]:{{FRONTEND_PORT}}")'
+        DNSDIST_IPV6_FRONTEND='addLocal("[::]:{{FRONTEND_PORT}}")'
 
         DNSDIST_IPV6_BACKEND='newServer({
-    address="[::1]:{{RECURSIVE_PORT}}"
+    address="[::1]:{{RECURSIVE_PORT}}",
+    name="unbound-v6"
 })'
 
     else
