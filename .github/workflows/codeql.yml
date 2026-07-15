@@ -25,6 +25,8 @@ jobs:
   shellcheck:
     name: ShellCheck (Bash Linter)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read	
     steps:
       - name: Checkout repository
         uses: actions/checkout@692973e3d93d1294b7c15b5065558f2d66617d3b # v4.1.7
