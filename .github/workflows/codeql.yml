@@ -1,11 +1,22 @@
-# .github/workflows/codeql.yml
-name: "CodeQL Advanced"
+name: "CodeQL"
 
 on:
   push:
     branches: [ "main" ]
+    paths:                  # Tambahkan ini agar lebih sensitif
+      - '**/*.sh'
+      - '**/*.tpl'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '.github/workflows/**'
   pull_request:
     branches: [ "main" ]
+    paths:
+      - '**/*.sh'
+      - '**/*.tpl'
+      - '**/*.yaml'
+      - '**/*.yml'
+      - '.github/workflows/**'
   schedule:
     - cron: '33 22 * * 0'
 
@@ -22,18 +33,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['shell', 'actions']  # Shell utama + GitHub Actions workflow
+        language: ['shell', 'actions']
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v7
 
+    # Initialize CodeQL
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
         languages: ${{ matrix.language }}
-        # queries: security-extended,security-and-quality  # Uncomment jika mau lebih ketat
+        # queries: security-extended,security-and-quality   # Bisa di-uncomment
 
+    # Run analysis
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
       with:
