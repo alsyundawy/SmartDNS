@@ -16,11 +16,11 @@ STATE_FILE="cache/install.state"
 # Save State
 ####################################
 
-save_state(){
+save_state() {
 
-    mkdir -p cache
+	mkdir -p cache
 
-    echo "$1" > "${STATE_FILE}"
+	echo "$1" >"${STATE_FILE}"
 
 }
 
@@ -28,11 +28,10 @@ save_state(){
 # Get State
 ####################################
 
-get_state(){
+get_state() {
 
-    [[ -f "${STATE_FILE}" ]] || return
+	[[ -f ${STATE_FILE} ]] || return
 
-    cat "${STATE_FILE}"
+	cat "${STATE_FILE}"
 
 }
-

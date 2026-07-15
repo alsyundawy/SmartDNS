@@ -10,21 +10,20 @@
 # general code quality and maintainability improvements.
 #
 
-success(){
+success() {
 
-    echo -e "${GREEN}[ OK ]${NC} $1"
-
-}
-
-warn(){
-
-    echo -e "${YELLOW}[WARN]${NC} $1"
+	echo -e "${GREEN}[ OK ]${NC} $1"
 
 }
 
-error(){
+warn() {
 
-    echo -e "${RED}[FAIL]${NC} $1"
+	echo -e "${YELLOW}[WARN]${NC} $1"
 
 }
 
+error() {
+
+	echo -e "${RED}[FAIL]${NC} $1"
+
+}

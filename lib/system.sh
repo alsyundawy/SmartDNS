@@ -10,9 +10,9 @@
 # general code quality and maintainability improvements.
 #
 
-banner(){
+banner() {
 
-cat << "EOF"
+	cat <<"EOF"
 
 ==========================================
       SMART DNS INSTALLER
@@ -23,8 +23,8 @@ EOF
 
 }
 
-check_root(){
+check_root() {
 
-[[ ${EUID} -ne 0 ]] && fatal "Run as root."
+	[[ ${EUID} -ne 0 ]] && fatal "Run as root."
 
 }

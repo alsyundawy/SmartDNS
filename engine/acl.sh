@@ -14,48 +14,46 @@
 # ACL Wizard
 ####################################
 
-run_acl(){
+run_acl() {
 
-    mkdir -p cache
+	mkdir -p cache
 
-    ACL_FILE="cache/acl.list"
+	ACL_FILE="cache/acl.list"
 
-    cat > "${ACL_FILE}" <<EOF
+	cat >"${ACL_FILE}" <<EOF
 127.0.0.0/8
 ::1/128
 EOF
 
-    echo
-    echo "======================================"
-    echo "         RESOLVER ACL"
-    echo "======================================"
+	echo
+	echo "======================================"
+	echo "         RESOLVER ACL"
+	echo "======================================"
 
-    echo
-    echo "Default ACL"
-    echo "  - 127.0.0.0/8"
-    echo "  - ::1/128"
-    echo
+	echo
+	echo "Default ACL"
+	echo "  - 127.0.0.0/8"
+	echo "  - ::1/128"
+	echo
 
-    while true
-    do
+	while true; do
 
-        CIDR=$(ask_cidr "Add Resolver CIDR (ENTER = Finish) :")
+		CIDR=$(ask_cidr "Add Resolver CIDR (ENTER = Finish) :")
 
-        [[ -z "${CIDR}" ]] && break
+		[[ -z ${CIDR} ]] && break
 
-        if grep -qx "${CIDR}" "${ACL_FILE}"; then
+		if grep -qx "${CIDR}" "${ACL_FILE}"; then
 
-            warn "ACL already exists."
+			warn "ACL already exists."
 
-            continue
+			continue
 
-        fi
+		fi
 
-        echo "${CIDR}" >> "${ACL_FILE}"
+		echo "${CIDR}" >>"${ACL_FILE}"
 
-        success "Added ${CIDR}"
+		success "Added ${CIDR}"
 
-    done
+	done
 
 }
-

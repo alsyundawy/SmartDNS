@@ -20,15 +20,14 @@
 
 next_power_of_two() {
 
-    local n=$1
-    local p=1
+	local n=$1
+	local p=1
 
-    while (( p < n ))
-    do
-        p=$((p*2))
-    done
+	while ((p < n)); do
+		p=$((p * 2))
+	done
 
-    echo "${p}"
+	echo "${p}"
 
 }
 
@@ -36,124 +35,124 @@ next_power_of_two() {
 # Unbound
 #########################################
 
-tuning_unbound(){
+tuning_unbound() {
 
-    # shellcheck disable=SC2153
-    if (( CPU_THREADS <= 2 )); then
+	# shellcheck disable=SC2153
+	if ((CPU_THREADS <= 2)); then
 
-        UNBOUND_THREADS=2
+		UNBOUND_THREADS=2
 
-    elif (( CPU_THREADS <=4 )); then
+	elif ((CPU_THREADS <= 4)); then
 
-        UNBOUND_THREADS=4
+		UNBOUND_THREADS=4
 
-    elif (( CPU_THREADS <=8 )); then
+	elif ((CPU_THREADS <= 8)); then
 
-        UNBOUND_THREADS=8
+		UNBOUND_THREADS=8
 
-    elif (( CPU_THREADS <=16 )); then
+	elif ((CPU_THREADS <= 16)); then
 
-        UNBOUND_THREADS=12
+		UNBOUND_THREADS=12
 
-    elif (( CPU_THREADS <=24 )); then
+	elif ((CPU_THREADS <= 24)); then
 
-        UNBOUND_THREADS=16
+		UNBOUND_THREADS=16
 
-    elif (( CPU_THREADS <=32 )); then
+	elif ((CPU_THREADS <= 32)); then
 
-        UNBOUND_THREADS=20
+		UNBOUND_THREADS=20
 
-    elif (( CPU_THREADS <=48 )); then
+	elif ((CPU_THREADS <= 48)); then
 
-        UNBOUND_THREADS=24
+		UNBOUND_THREADS=24
 
-    else
+	else
 
-        UNBOUND_THREADS=32
+		UNBOUND_THREADS=32
 
-    fi
+	fi
 
-#################################
-# CACHE
-#################################
+	#################################
+	# CACHE
+	#################################
 
-if (( RAM_MB <= 2048 )); then
+	if ((RAM_MB <= 2048)); then
 
-    RRSET_CACHE="64m"
-    MSG_CACHE="32m"
+		RRSET_CACHE="64m"
+		MSG_CACHE="32m"
 
-elif (( RAM_MB <= 4096 )); then
+	elif ((RAM_MB <= 4096)); then
 
-    RRSET_CACHE="128m"
-    MSG_CACHE="64m"
+		RRSET_CACHE="128m"
+		MSG_CACHE="64m"
 
-elif (( RAM_MB <= 8192 )); then
+	elif ((RAM_MB <= 8192)); then
 
-    RRSET_CACHE="256m"
-    MSG_CACHE="128m"
+		RRSET_CACHE="256m"
+		MSG_CACHE="128m"
 
-elif (( RAM_MB <= 16384 )); then
+	elif ((RAM_MB <= 16384)); then
 
-    RRSET_CACHE="512m"
-    MSG_CACHE="256m"
+		RRSET_CACHE="512m"
+		MSG_CACHE="256m"
 
-elif (( RAM_MB <= 32768 )); then
+	elif ((RAM_MB <= 32768)); then
 
-    RRSET_CACHE="1024m"
-    MSG_CACHE="512m"
+		RRSET_CACHE="1024m"
+		MSG_CACHE="512m"
 
-elif (( RAM_MB <= 65536 )); then
+	elif ((RAM_MB <= 65536)); then
 
-    RRSET_CACHE="2048m"
-    MSG_CACHE="1024m"
+		RRSET_CACHE="2048m"
+		MSG_CACHE="1024m"
 
-else
+	else
 
-    RRSET_CACHE="4096m"
-    MSG_CACHE="2048m"
+		RRSET_CACHE="4096m"
+		MSG_CACHE="2048m"
 
-fi
+	fi
 
-    #################################
-    # SLABS
-    #################################
+	#################################
+	# SLABS
+	#################################
 
-    SLABS=$(next_power_of_two "${UNBOUND_THREADS}")
+	SLABS=$(next_power_of_two "${UNBOUND_THREADS}")
 
-    ((SLABS>32)) && SLABS=32
+	((SLABS > 32)) && SLABS=32
 
-    #################################
-    # QUERY
-    #################################
+	#################################
+	# QUERY
+	#################################
 
-    OUTGOING_RANGE=$((UNBOUND_THREADS*1024))
+	OUTGOING_RANGE=$((UNBOUND_THREADS * 1024))
 
-    ((OUTGOING_RANGE<4096)) && OUTGOING_RANGE=4096
-    ((OUTGOING_RANGE>65535)) && OUTGOING_RANGE=65535
+	((OUTGOING_RANGE < 4096)) && OUTGOING_RANGE=4096
+	((OUTGOING_RANGE > 65535)) && OUTGOING_RANGE=65535
 
-    NUM_QUERIES=$((UNBOUND_THREADS*512))
+	NUM_QUERIES=$((UNBOUND_THREADS * 512))
 
-if (( RAM_MB <= 4096 )); then
+	if ((RAM_MB <= 4096)); then
 
-    INFRA_CACHE=100000
+		INFRA_CACHE=100000
 
-elif (( RAM_MB <= 8192 )); then
+	elif ((RAM_MB <= 8192)); then
 
-    INFRA_CACHE=200000
+		INFRA_CACHE=200000
 
-elif (( RAM_MB <= 16384 )); then
+	elif ((RAM_MB <= 16384)); then
 
-    INFRA_CACHE=400000
+		INFRA_CACHE=400000
 
-elif (( RAM_MB <= 32768 )); then
+	elif ((RAM_MB <= 32768)); then
 
-    INFRA_CACHE=800000
+		INFRA_CACHE=800000
 
-else
+	else
 
-    INFRA_CACHE=1000000
+		INFRA_CACHE=1000000
 
-fi
+	fi
 
 }
 
@@ -161,95 +160,81 @@ fi
 # dnsdist
 #########################################
 
-tuning_dnsdist(){
+tuning_dnsdist() {
 
-    #################################
-    # PACKET CACHE
-    #################################
+	#################################
+	# PACKET CACHE
+	#################################
 
-    if (( RAM_MB <2048 ))
+	if ((RAM_MB < 2048)); then
 
-    then
+		DNSDIST_CACHE=100000
 
-        DNSDIST_CACHE=100000
+	elif ((RAM_MB < 4096)); then
 
-    elif (( RAM_MB <4096 ))
+		DNSDIST_CACHE=300000
 
-    then
+	elif ((RAM_MB < 8192)); then
 
-        DNSDIST_CACHE=300000
+		DNSDIST_CACHE=500000
 
-    elif (( RAM_MB <8192 ))
+	elif ((RAM_MB < 16384)); then
 
-    then
+		DNSDIST_CACHE=1000000
 
-        DNSDIST_CACHE=500000
+	elif ((RAM_MB < 32768)); then
 
-    elif (( RAM_MB <16384 ))
+		DNSDIST_CACHE=2000000
 
-    then
+	else
 
-        DNSDIST_CACHE=1000000
+		DNSDIST_CACHE=5000000
 
-    elif (( RAM_MB <32768 ))
+	fi
 
-    then
+	#################################
+	# TCP
+	#################################
 
-        DNSDIST_CACHE=2000000
+	TCP_THREADS=$((CPU_THREADS * 8))
 
-    else
+	((TCP_THREADS < 32)) && TCP_THREADS=32
 
-        DNSDIST_CACHE=5000000
+	if ((CPU_THREADS <= 4)); then
 
-    fi
+		TCP_QUEUE=1024
 
-    #################################
-    # TCP
-    #################################
+	elif ((CPU_THREADS <= 8)); then
 
-    TCP_THREADS=$((CPU_THREADS*8))
+		TCP_QUEUE=2048
 
-    ((TCP_THREADS<32)) && TCP_THREADS=32
+	elif ((CPU_THREADS <= 16)); then
 
-if (( CPU_THREADS <= 4 )); then
+		TCP_QUEUE=4096
 
-    TCP_QUEUE=1024
+	else
 
-elif (( CPU_THREADS <= 8 )); then
+		TCP_QUEUE=8192
 
-    TCP_QUEUE=2048
+	fi
 
-elif (( CPU_THREADS <= 16 )); then
+	#################################
+	# UDP
+	#################################
 
-    TCP_QUEUE=4096
+	if ((RAM_MB < 4096)); then
 
-else
+		UDP_OUTSTANDING=16384
 
-    TCP_QUEUE=8192
+	elif ((RAM_MB < 8192)); then
 
-fi
+		UDP_OUTSTANDING=32768
 
-    #################################
-    # UDP
-    #################################
+	else
 
-    if (( RAM_MB <4096 ))
+		UDP_OUTSTANDING=65535
 
-    then
-
-        UDP_OUTSTANDING=16384
-
-    elif (( RAM_MB <8192 ))
-
-    then
-
-        UDP_OUTSTANDING=32768
-
-    else
-
-        UDP_OUTSTANDING=65535
-
-    fi
+	fi
 
 }
 
@@ -257,19 +242,17 @@ fi
 # Network
 #########################################
 
-tuning_network(){
+tuning_network() {
 
-    if [[ -n "${SERVER_IPV6}" ]]
+	if [[ -n ${SERVER_IPV6} ]]; then
 
-    then
+		IPV6_AVAILABLE=yes
 
-        IPV6_AVAILABLE=yes
+	else
 
-    else
+		IPV6_AVAILABLE=no
 
-        IPV6_AVAILABLE=no
-
-    fi
+	fi
 
 }
 
@@ -277,13 +260,13 @@ tuning_network(){
 # Main
 #########################################
 
-calculate_tuning(){
+calculate_tuning() {
 
-    tuning_unbound
+	tuning_unbound
 
-    tuning_dnsdist
+	tuning_dnsdist
 
-    tuning_network
+	tuning_network
 
 }
 
@@ -291,25 +274,25 @@ calculate_tuning(){
 # Save
 #########################################
 
-save_tuning(){
+save_tuning() {
 
-mkdir -p /tmp/smartdns
+	mkdir -p /tmp/smartdns
 
-cat > /tmp/smartdns/tuning.env <<EOF
-UNBOUND_THREADS=${UNBOUND_THREADS}
-RRSET_CACHE=${RRSET_CACHE}
-MSG_CACHE=${MSG_CACHE}
-SLABS=${SLABS}
-OUTGOING_RANGE=${OUTGOING_RANGE}
-NUM_QUERIES=${NUM_QUERIES}
-INFRA_CACHE=${INFRA_CACHE}
+	cat >/tmp/smartdns/tuning.env <<EOF
+UNBOUND_THREADS="${UNBOUND_THREADS}"
+RRSET_CACHE="${RRSET_CACHE}"
+MSG_CACHE="${MSG_CACHE}"
+SLABS="${SLABS}"
+OUTGOING_RANGE="${OUTGOING_RANGE}"
+NUM_QUERIES="${NUM_QUERIES}"
+INFRA_CACHE="${INFRA_CACHE}"
 
-DNSDIST_CACHE=${DNSDIST_CACHE}
-TCP_THREADS=${TCP_THREADS}
-TCP_QUEUE=${TCP_QUEUE}
-UDP_OUTSTANDING=${UDP_OUTSTANDING}
+DNSDIST_CACHE="${DNSDIST_CACHE}"
+TCP_THREADS="${TCP_THREADS}"
+TCP_QUEUE="${TCP_QUEUE}"
+UDP_OUTSTANDING="${UDP_OUTSTANDING}"
 
-IPV6_AVAILABLE=${IPV6_AVAILABLE}
+IPV6_AVAILABLE="${IPV6_AVAILABLE}"
 EOF
 
 }
@@ -318,32 +301,32 @@ EOF
 # Show Result
 #########################################
 
-show_tuning(){
+show_tuning() {
 
-echo
-echo "======================================"
-echo " SMART TUNING RESULT"
-echo "======================================"
+	echo
+	echo "======================================"
+	echo " SMART TUNING RESULT"
+	echo "======================================"
 
-printf "%-25s : %s\n" "Threads" "${UNBOUND_THREADS}"
-printf "%-25s : %s\n" "RRSET Cache" "${RRSET_CACHE}"
-printf "%-25s : %s\n" "MSG Cache" "${MSG_CACHE}"
-printf "%-25s : %s\n" "Slabs" "${SLABS}"
-printf "%-25s : %s\n" "Outgoing Range" "${OUTGOING_RANGE}"
-printf "%-25s : %s\n" "Queries / Thread" "${NUM_QUERIES}"
-printf "%-25s : %s\n" "Infra Cache" "${INFRA_CACHE}"
+	printf "%-25s : %s\n" "Threads" "${UNBOUND_THREADS}"
+	printf "%-25s : %s\n" "RRSET Cache" "${RRSET_CACHE}"
+	printf "%-25s : %s\n" "MSG Cache" "${MSG_CACHE}"
+	printf "%-25s : %s\n" "Slabs" "${SLABS}"
+	printf "%-25s : %s\n" "Outgoing Range" "${OUTGOING_RANGE}"
+	printf "%-25s : %s\n" "Queries / Thread" "${NUM_QUERIES}"
+	printf "%-25s : %s\n" "Infra Cache" "${INFRA_CACHE}"
 
-echo
+	echo
 
-printf "%-25s : %s\n" "Packet Cache" "${DNSDIST_CACHE}"
-printf "%-25s : %s\n" "TCP Threads" "${TCP_THREADS}"
-printf "%-25s : %s\n" "TCP Queue" "${TCP_QUEUE}"
-printf "%-25s : %s\n" "UDP Outstanding" "${UDP_OUTSTANDING}"
+	printf "%-25s : %s\n" "Packet Cache" "${DNSDIST_CACHE}"
+	printf "%-25s : %s\n" "TCP Threads" "${TCP_THREADS}"
+	printf "%-25s : %s\n" "TCP Queue" "${TCP_QUEUE}"
+	printf "%-25s : %s\n" "UDP Outstanding" "${UDP_OUTSTANDING}"
 
-echo
+	echo
 
-printf "%-25s : %s\n" "IPv6 Available" "${IPV6_AVAILABLE}"
+	printf "%-25s : %s\n" "IPv6 Available" "${IPV6_AVAILABLE}"
 
-echo
+	echo
 
 }

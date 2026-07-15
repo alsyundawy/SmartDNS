@@ -23,28 +23,28 @@ BACKUP_DIR="/var/backups/smartdns"
 # Backup
 #########################################
 
-backup_config(){
+backup_config() {
 
-    local now
-    now=$(date +%F-%H%M%S)
+	local now
+	now=$(date +%F-%H%M%S)
 
-    mkdir -p "${BACKUP_DIR}"
+	mkdir -p "${BACKUP_DIR}"
 
 	if [[ -f "${UNBOUND_DIR}/smartdns.conf" ]]; then
 
 		cp "${UNBOUND_DIR}/smartdns.conf" \
-		   "${BACKUP_DIR}/smartdns.conf.${now}"
+			"${BACKUP_DIR}/smartdns.conf.${now}"
 
 	fi
 
-    if [[ -f "${DNSDIST_DIR}/dnsdist.conf" ]]; then
+	if [[ -f "${DNSDIST_DIR}/dnsdist.conf" ]]; then
 
-        cp "${DNSDIST_DIR}/dnsdist.conf" \
-           "${BACKUP_DIR}/dnsdist.conf.${now}"
+		cp "${DNSDIST_DIR}/dnsdist.conf" \
+			"${BACKUP_DIR}/dnsdist.conf.${now}"
 
-    fi
+	fi
 
-    success "Configuration backup completed."
+	success "Configuration backup completed."
 
 }
 
@@ -52,7 +52,7 @@ backup_config(){
 # Install Config
 #########################################
 
-install_config(){
+install_config() {
 
 	cp output/recursive.conf "${UNBOUND_DIR}/smartdns.conf"
 
@@ -60,9 +60,9 @@ install_config(){
 	grep -n "auto-trust-anchor-file" "${UNBOUND_DIR}/smartdns.conf"
 	echo "====================="
 
-    cp output/dnsdist.conf "${DNSDIST_DIR}/dnsdist.conf"
+	cp output/dnsdist.conf "${DNSDIST_DIR}/dnsdist.conf"
 
-    success "Configuration installed."
+	success "Configuration installed."
 
 }
 
@@ -70,99 +70,93 @@ install_config(){
 # Validate Config
 #########################################
 
-validate_config(){
+validate_config() {
 
-    info "Validating Unbound configuration..."
+	info "Validating Unbound configuration..."
 
-    if unbound-checkconf /etc/unbound/unbound.conf.d/smartdns.conf >/dev/null 2>&1; then
-        success "Unbound configuration OK"
-    else
-        error "Unbound configuration FAILED"
-        return 1
-    fi
+	if unbound-checkconf /etc/unbound/unbound.conf.d/smartdns.conf >/dev/null 2>&1; then
+		success "Unbound configuration OK"
+	else
+		error "Unbound configuration FAILED"
+		return 1
+	fi
 
-    info "Validating dnsdist configuration..."
+	info "Validating dnsdist configuration..."
 
-    if dnsdist --check-config >/dev/null 2>&1; then
-        success "dnsdist configuration OK"
-    else
-        error "dnsdist configuration FAILED"
-        return 1
-    fi
+	if dnsdist --check-config >/dev/null 2>&1; then
+		success "dnsdist configuration OK"
+	else
+		error "dnsdist configuration FAILED"
+		return 1
+	fi
 
 }
 
-restart_services(){
+restart_services() {
 
-    info "Restarting Unbound..."
-    systemctl restart unbound || return 1
-    success "Unbound restarted."
+	info "Restarting Unbound..."
+	systemctl restart unbound || return 1
+	success "Unbound restarted."
 
-    info "Restarting dnsdist..."
-    systemctl restart dnsdist || return 1
-    success "dnsdist restarted."
+	info "Restarting dnsdist..."
+	systemctl restart dnsdist || return 1
+	success "dnsdist restarted."
 
 }
 
 health_check() {
 
-    info "Running DNS Health Check..."
+	info "Running DNS Health Check..."
 
-    local DNS_TARGET
+	local DNS_TARGET
 
-    if [[ "${ENABLE_IPV6}" == "yes" ]]; then
-        DNS_TARGET="::1"
-    else
-        DNS_TARGET="127.0.0.1"
-    fi
+	if [[ ${ENABLE_IPV6} == "yes" ]]; then
+		DNS_TARGET="::1"
+	else
+		DNS_TARGET="127.0.0.1"
+	fi
 
-    for _ in {1..15}; do
+	for _ in {1..15}; do
 
-        # shellcheck disable=SC2312
-        if dig @"${DNS_TARGET}" google.com +short 2>/dev/null | grep -q .; then
-            success "DNS Resolver is working."
-            return 0
-        fi
+		# shellcheck disable=SC2312
+		if dig @"${DNS_TARGET}" google.com +short 2>/dev/null | grep -q .; then
+			success "DNS Resolver is working."
+			return 0
+		fi
 
-        sleep 1
-    done
+		sleep 1
+	done
 
-    error "DNS Resolver failed."
-    return 1
+	error "DNS Resolver failed."
+	return 1
 }
 
-rollback_config(){
+rollback_config() {
 
-    warn "Rollback configuration..."
+	warn "Rollback configuration..."
 
-    # shellcheck disable=SC2012,SC2312
-    LATEST_UNBOUND=$(ls -t /var/backups/smartdns/smartdns.conf* 2>/dev/null | head -1)
+	# shellcheck disable=SC2012,SC2312
+	LATEST_UNBOUND=$(ls -t /var/backups/smartdns/smartdns.conf* 2>/dev/null | head -1)
 
-    if [[ -n "${LATEST_UNBOUND}" ]]
+	if [[ -n ${LATEST_UNBOUND} ]]; then
 
-    then
+		cp "${LATEST_UNBOUND}" \
+			/etc/unbound/unbound.conf.d/smartdns.conf
 
-        cp "${LATEST_UNBOUND}" \
-           /etc/unbound/unbound.conf.d/smartdns.conf
+	fi
 
-    fi
+	# shellcheck disable=SC2012,SC2312
+	LATEST_DNSDIST=$(ls -t /var/backups/smartdns/dnsdist.conf* 2>/dev/null | head -1)
 
-    # shellcheck disable=SC2012,SC2312
-    LATEST_DNSDIST=$(ls -t /var/backups/smartdns/dnsdist.conf* 2>/dev/null | head -1)
+	if [[ -n ${LATEST_DNSDIST} ]]; then
 
-    if [[ -n "${LATEST_DNSDIST}" ]]
+		cp "${LATEST_DNSDIST}" \
+			/etc/dnsdist/dnsdist.conf
 
-    then
+	fi
 
-        cp "${LATEST_DNSDIST}" \
-           /etc/dnsdist/dnsdist.conf
+	systemctl restart unbound
 
-    fi
-
-    systemctl restart unbound
-
-    systemctl restart dnsdist
+	systemctl restart dnsdist
 
 }
-
-

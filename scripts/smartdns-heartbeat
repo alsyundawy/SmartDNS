@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-sleep $(( RANDOM % 120 ))
+sleep $((RANDOM % 120))
 
 # shellcheck source=/dev/null
 source /var/lib/smartdns/install.env

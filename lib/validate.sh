@@ -11,142 +11,137 @@
 #
 
 # shellcheck disable=SC2034
-detect_os(){
+detect_os() {
 
-if [[ ! -f /etc/os-release ]]; then
+	if [[ ! -f /etc/os-release ]]; then
 
-    fatal "Unsupported OS"
+		fatal "Unsupported OS"
 
-fi
+	fi
 
-# shellcheck source=/dev/null
-source /etc/os-release
+	# shellcheck source=/dev/null
+	source /etc/os-release
 
-OS="${NAME}"
-VERSION="${VERSION_ID}"
+	OS="${NAME}"
+	VERSION="${VERSION_ID}"
 
-case "${ID}" in
+	case "${ID}" in
 
-ubuntu|debian)
-;;
+	ubuntu | debian) ;;
 
-*)
-fatal "Only Ubuntu/Debian Supported"
-;;
+	*)
+		fatal "Only Ubuntu/Debian Supported"
+		;;
 
-esac
-
-}
-
-ask_yes_no(){
-
-    local PROMPT="$1"
-    local DEFAULT="$2"
-
-    while true
-    do
-        read -rp "${PROMPT} " ANSWER
-
-        ANSWER=${ANSWER:-${DEFAULT}}
-
-        case "${ANSWER^^}" in
-            Y|YES)
-                echo "yes"
-                return
-                ;;
-
-            N|NO)
-                echo "no"
-                return
-                ;;
-
-            *)
-                warn "Please enter Y or N."
-                ;;
-        esac
-
-    done
+	esac
 
 }
 
-ask_number(){
+ask_yes_no() {
 
-    local PROMPT="$1"
-    local DEFAULT="$2"
+	local PROMPT="$1"
+	local DEFAULT="$2"
 
-    while true
-    do
+	while true; do
+		read -rp "${PROMPT} " ANSWER
 
-        read -rp "${PROMPT} " ANSWER
+		ANSWER=${ANSWER:-${DEFAULT}}
 
-        ANSWER=${ANSWER:-${DEFAULT}}
+		case "${ANSWER^^}" in
+		Y | YES)
+			echo "yes"
+			return
+			;;
 
-        [[ "${ANSWER}" =~ ^[0-9]+$ ]] && {
+		N | NO)
+			echo "no"
+			return
+			;;
 
-            echo "${ANSWER}"
-            return
+		*)
+			warn "Please enter Y or N."
+			;;
+		esac
 
-        }
-
-        warn "Please enter numbers only."
-
-    done
-
-}
-
-ask_recursive_port(){
-
-    local PROMPT="$1"
-    local DEFAULT="$2"
-    local PORT
-
-    while true
-    do
-        PORT=$(ask_number "${PROMPT}" "${DEFAULT}")
-
-        if (( PORT >= 1024 && PORT <= 65535 )); then
-            echo "${PORT}"
-            return
-        fi
-
-        warn "Recursive Port must be between 1024 and 65535."
-
-    done
+	done
 
 }
 
-ask_frontend_port(){
+ask_number() {
 
-    local PROMPT="$1"
-    local DEFAULT="$2"
-    local PORT
+	local PROMPT="$1"
+	local DEFAULT="$2"
 
-    while true
-    do
-        PORT=$(ask_number "${PROMPT}" "${DEFAULT}")
+	while true; do
 
-        if (( PORT == 53 )); then
-            echo "${PORT}"
-            return
-        fi
+		read -rp "${PROMPT} " ANSWER
 
-        if (( PORT >= 1024 && PORT <= 65535 )); then
-            echo "${PORT}"
-            return
-        fi
+		ANSWER=${ANSWER:-${DEFAULT}}
 
-        warn "Frontend Port must be 53 or between 1024 and 65535."
+		[[ ${ANSWER} =~ ^[0-9]+$ ]] && {
 
-    done
+			echo "${ANSWER}"
+			return
+
+		}
+
+		warn "Please enter numbers only."
+
+	done
 
 }
 
-validate_ports(){
+ask_recursive_port() {
 
-    local RECURSIVE="$1"
-    local FRONTEND="$2"
+	local PROMPT="$1"
+	local DEFAULT="$2"
+	local PORT
 
-    [[ "${RECURSIVE}" != "${FRONTEND}" ]]
+	while true; do
+		PORT=$(ask_number "${PROMPT}" "${DEFAULT}")
+
+		if ((PORT >= 1024 && PORT <= 65535)); then
+			echo "${PORT}"
+			return
+		fi
+
+		warn "Recursive Port must be between 1024 and 65535."
+
+	done
+
+}
+
+ask_frontend_port() {
+
+	local PROMPT="$1"
+	local DEFAULT="$2"
+	local PORT
+
+	while true; do
+		PORT=$(ask_number "${PROMPT}" "${DEFAULT}")
+
+		if ((PORT == 53)); then
+			echo "${PORT}"
+			return
+		fi
+
+		if ((PORT >= 1024 && PORT <= 65535)); then
+			echo "${PORT}"
+			return
+		fi
+
+		warn "Frontend Port must be 53 or between 1024 and 65535."
+
+	done
+
+}
+
+validate_ports() {
+
+	local RECURSIVE="$1"
+	local FRONTEND="$2"
+
+	[[ ${RECURSIVE} != "${FRONTEND}" ]]
 
 }
 
@@ -154,67 +149,65 @@ validate_ports(){
 # CIDR
 ####################################
 
-ask_cidr(){
+ask_cidr() {
 
-    local PROMPT="$1"
+	local PROMPT="$1"
 
-    while true
-    do
+	while true; do
 
-        read -rp "${PROMPT} " CIDR
+		read -rp "${PROMPT} " CIDR
 
-        [[ -z "${CIDR}" ]] && {
-            echo ""
-            return
-        }
+		[[ -z ${CIDR} ]] && {
+			echo ""
+			return
+		}
 
-        ################################
-        # IPv4
-        ################################
+		################################
+		# IPv4
+		################################
 
-        if [[ "${CIDR}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$ ]]; then
+		if [[ ${CIDR} =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/([0-9]|[12][0-9]|3[0-2])$ ]]; then
 
-            echo "${CIDR}"
+			echo "${CIDR}"
 
-            return
+			return
 
-        fi
+		fi
 
-        ################################
-        # IPv6
-        ################################
+		################################
+		# IPv6
+		################################
 
-        if [[ "${CIDR}" =~ : ]] && [[ "${CIDR}" =~ /([0-9]|[1-9][0-9]|1[01][0-9]|12[0-8])$ ]]; then
+		if [[ ${CIDR} =~ : ]] && [[ ${CIDR} =~ /([0-9]|[1-9][0-9]|1[01][0-9]|12[0-8])$ ]]; then
 
-            echo "${CIDR}"
+			echo "${CIDR}"
 
-            return
+			return
 
-        fi
+		fi
 
-        warn "Invalid CIDR."
+		warn "Invalid CIDR."
 
-    done
+	done
 
 }
 ####################################
 # IPv4
 ####################################
 
-validate_ipv4(){
+validate_ipv4() {
 
-    local ip="$1"
+	local ip="$1"
 
-    [[ ${ip} =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+	[[ ${ip} =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
 
-    IFS=. read -r a b c d <<<"${ip}"
+	IFS=. read -r a b c d <<<"${ip}"
 
-    for i in "${a}" "${b}" "${c}" "${d}"
-    do
-        ((i>=0 && i<=255)) || return 1
-    done
+	for i in "${a}" "${b}" "${c}" "${d}"; do
+		((i >= 0 && i <= 255)) || return 1
+	done
 
-    return 0
+	return 0
 
 }
 
@@ -222,21 +215,21 @@ validate_ipv4(){
 # IPv6
 ####################################
 
-validate_ipv6(){
+validate_ipv6() {
 
-    local ip="$1"
+	local ip="$1"
 
-    if command -v python3 >/dev/null 2>&1; then
+	if command -v python3 >/dev/null 2>&1; then
 
-        python3 - <<EOF >/dev/null 2>&1
+		python3 - <<EOF >/dev/null 2>&1
 import ipaddress
 ipaddress.IPv6Address("${ip}")
 EOF
 
-        return $?
+		return $?
 
-    fi
+	fi
 
-    [[ "${ip}" == *:* ]]
+	[[ ${ip} == *:* ]]
 
 }

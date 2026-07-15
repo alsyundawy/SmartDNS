@@ -14,6 +14,9 @@
 # - Sourced LC_ALL=C locale execution for consistent English command output parsing.
 # - Improved telemetry UUID generation with stable kernel-based /proc/sys/kernel/random/uuid fallback.
 # - Pointed cron updater scheduler to permanent /opt/blocklist/update-blocklist.sh script.
+# - Added openssl package to installation lists to guarantee key generation succeeds.
+# - Quoted all generated variable assignments in cache/temp .env files to prevent shell expansion failures.
+# - Unlinked systemd-resolved resolv.conf symlinks prior to writing static system DNS configurations.
 #
 
 set -uo pipefail
@@ -176,7 +179,7 @@ read -rp "Install required packages? [Y/n] : " INSTALL_PACKAGE
 
 INSTALL_PACKAGE=${INSTALL_PACKAGE:-Y}
 
-if [[ "${INSTALL_PACKAGE}" =~ ^[Yy]$ ]]; then
+if [[ ${INSTALL_PACKAGE} =~ ^[Yy]$ ]]; then
 
 	# Backup and prepare resolver/systemd-resolved settings before installation to prevent port 53 bind conflicts
 	backup_resolv
@@ -188,7 +191,7 @@ if [[ "${INSTALL_PACKAGE}" =~ ^[Yy]$ ]]; then
 		timedatectl set-timezone Asia/Jakarta
 		success "Timezone set to Asia/Jakarta."
 	fi
-	
+
 	info "Setting Hostname..."
 	hostnamectl set-hostname SmartDNS
 	success "Hostname set to SmartDNS."
@@ -198,23 +201,22 @@ if [[ "${INSTALL_PACKAGE}" =~ ^[Yy]$ ]]; then
 	repair_package_manager || exit 1
 
 	wait_package_manager || exit 1
-	
-    install_packages || exit 1
-    save_state PACKAGE
-	
+
+	install_packages || exit 1
+	save_state PACKAGE
+
 	verify_packages || exit 1
-		
+
 	install_swap
-	
+
 	install_sysctl
-	
 
-    info "Backup current configuration..."
-    backup_config || exit 1
+	info "Backup current configuration..."
+	backup_config || exit 1
 
-    info "Installing configuration..."
-    install_config || exit 1
-    save_state INSTALL
+	info "Installing configuration..."
+	install_config || exit 1
+	save_state INSTALL
 
 	info "Installing DNS Blocklist..."
 	install_blocklist || exit 1
@@ -228,16 +230,16 @@ if [[ "${INSTALL_PACKAGE}" =~ ^[Yy]$ ]]; then
 	info "Installing Heartbeat Scheduler..."
 	install_heartbeat_scheduler || exit 1
 
-    info "Validating configuration..."
-    validate_config || exit 1
-    save_state VALIDATE
+	info "Validating configuration..."
+	validate_config || exit 1
+	save_state VALIDATE
 
-    info "Preparing DNS environment..."
-    prepare_dns_environment
+	info "Preparing DNS environment..."
+	prepare_dns_environment
 
-    info "Restarting services..."
-    restart_services || exit 1
-    save_state SERVICE
+	info "Restarting services..."
+	restart_services || exit 1
+	save_state SERVICE
 
 	if health_check; then
 
@@ -251,7 +253,7 @@ if [[ "${INSTALL_PACKAGE}" =~ ^[Yy]$ ]]; then
 
 	fi
 
-    save_state DONE
+	save_state DONE
 
 fi
 
@@ -266,7 +268,7 @@ summary
 ####################################
 
 if ! send_heartbeat; then
-    warning "Unable to send telemetry."
+	warning "Unable to send telemetry."
 fi
 
 echo
@@ -278,4 +280,3 @@ echo "Username  : admin"
 echo "Password  : ${DNSDIST_WEB_PASSWORD}"
 echo "API Key   : ${DNSDIST_API_KEY}"
 echo
-

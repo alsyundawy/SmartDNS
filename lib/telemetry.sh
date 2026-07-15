@@ -38,21 +38,21 @@ PAYLOAD=""
 # shellcheck disable=SC2312
 generate_uuid() {
 
-    mkdir -p "${TELEMETRY_DIR}"
+	mkdir -p "${TELEMETRY_DIR}"
 
-    if [[ -s "${UUID_FILE}" ]]; then
-        UUID="$(<"${UUID_FILE}")"
-    else
-        if [[ -r /proc/sys/kernel/random/uuid ]]; then
-            UUID="$(cat /proc/sys/kernel/random/uuid)"
-        elif command -v uuidgen >/dev/null 2>&1; then
-            UUID="$(uuidgen)"
-        else
-            UUID=$(od -x -N 16 /dev/urandom | head -n 1 | awk '{print $2$3"-"$4"-"$5"-"$6"-"$7$8$9}')
-        fi
-        printf '%s\n' "${UUID}" > "${UUID_FILE}"
-        chmod 600 "${UUID_FILE}"
-    fi
+	if [[ -s ${UUID_FILE} ]]; then
+		UUID="$(<"${UUID_FILE}")"
+	else
+		if [[ -r /proc/sys/kernel/random/uuid ]]; then
+			UUID="$(cat /proc/sys/kernel/random/uuid)"
+		elif command -v uuidgen >/dev/null 2>&1; then
+			UUID="$(uuidgen)"
+		else
+			UUID=$(od -x -N 16 /dev/urandom | head -n 1 | awk '{print $2$3"-"$4"-"$5"-"$6"-"$7$8$9}')
+		fi
+		printf '%s\n' "${UUID}" >"${UUID_FILE}"
+		chmod 600 "${UUID_FILE}"
+	fi
 
 }
 
@@ -63,11 +63,11 @@ generate_uuid() {
 # shellcheck disable=SC2312
 init_install_metadata() {
 
-    mkdir -p "${TELEMETRY_DIR}"
+	mkdir -p "${TELEMETRY_DIR}"
 
-    if [[ ! -f "${INSTALL_FILE}" ]]; then
+	if [[ ! -f ${INSTALL_FILE} ]]; then
 
-        cat > "${INSTALL_FILE}" <<EOF
+		cat >"${INSTALL_FILE}" <<EOF
 {
     "uuid":"${UUID}",
     "product":"${SMARTDNS_NAME}",
@@ -77,9 +77,9 @@ init_install_metadata() {
 }
 EOF
 
-        chmod 600 "${INSTALL_FILE}"
+		chmod 600 "${INSTALL_FILE}"
 
-    fi
+	fi
 
 }
 
@@ -90,45 +90,46 @@ EOF
 # shellcheck disable=SC2312
 build_telemetry_payload() {
 
-    local DEFAULT_SPOOF_IPV4="103.151.222.227"
-    local DEFAULT_SPOOF_IPV6="2406:20c0::103:151:222:227"
+	local DEFAULT_SPOOF_IPV4="103.151.222.227"
+	local DEFAULT_SPOOF_IPV6="2406:20c0::103:151:222:227"
 
-    local SPOOF_IPV4_DEFAULT=false
-    local SPOOF_IPV6_DEFAULT=false
+	local SPOOF_IPV4_DEFAULT=false
+	local SPOOF_IPV6_DEFAULT=false
 
-    [[ "${SPOOF_IPV4:-}" == "${DEFAULT_SPOOF_IPV4}" ]] && SPOOF_IPV4_DEFAULT=true
-    [[ "${SPOOF_IPV6:-}" == "${DEFAULT_SPOOF_IPV6}" ]] && SPOOF_IPV6_DEFAULT=true
+	[[ ${SPOOF_IPV4-} == "${DEFAULT_SPOOF_IPV4}" ]] && SPOOF_IPV4_DEFAULT=true
+	[[ ${SPOOF_IPV6-} == "${DEFAULT_SPOOF_IPV6}" ]] && SPOOF_IPV6_DEFAULT=true
 
-    PAYLOAD=$(cat <<EOF
+	PAYLOAD=$(
+		cat <<EOF
 {
   "uuid":"${UUID}",
   "product":"${SMARTDNS_NAME:-SmartDNS}",
   "version":"${SMARTDNS_VERSION:-unknown}",
 
   "system":{
-    "hostname":"${HOSTNAME:-}",
-    "os":"${OS:-}",
-    "version":"${VERSION:-}",
-    "kernel":"${KERNEL:-}",
+    "hostname":"${HOSTNAME-}",
+    "os":"${OS-}",
+    "version":"${VERSION-}",
+    "kernel":"${KERNEL-}",
 	"uptime":"${UPTIME:-Unknown}",
-    "arch":"${CPU_ARCH:-}",
-    "cpu_model":"${CPU_MODEL:-}",
+    "arch":"${CPU_ARCH-}",
+    "cpu_model":"${CPU_MODEL-}",
     "cpu_threads":${CPU_THREADS:-0},
     "memory_mb":${RAM_MB:-0},
     "virtualization":"${VIRT:-Unknown}"
   },
 
   "network":{
-    "ipv4":"${SERVER_IPV4:-}",
-    "ipv6":"${SERVER_IPV6:-}",
+    "ipv4":"${SERVER_IPV4-}",
+    "ipv6":"${SERVER_IPV6-}",
     "ipv6_available":"${IPV6_AVAILABLE:-no}"
   },
 
   "features":{
-	"ipv6":$( [[ "${ENABLE_IPV6:-no}" == "yes" ]] && echo true || echo false ),
-	"dnssec":$( [[ "${ENABLE_DNSSEC:-no}" == "yes" ]] && echo true || echo false ),
-	"ratelimit":$( [[ "${ENABLE_RATELIMIT:-no}" == "yes" ]] && echo true || echo false ),
-	"querylog":$( [[ "${ENABLE_QUERYLOG:-no}" == "yes" ]] && echo true || echo false )
+	"ipv6":$([[ ${ENABLE_IPV6:-no} == "yes" ]] && echo true || echo false),
+	"dnssec":$([[ ${ENABLE_DNSSEC:-no} == "yes" ]] && echo true || echo false),
+	"ratelimit":$([[ ${ENABLE_RATELIMIT:-no} == "yes" ]] && echo true || echo false),
+	"querylog":$([[ ${ENABLE_QUERYLOG:-no} == "yes" ]] && echo true || echo false)
   },
 
   "spoof":{
@@ -138,8 +139,8 @@ build_telemetry_payload() {
 
   "tuning":{
     "threads":${UNBOUND_THREADS:-0},
-    "rrset_cache":"${RRSET_CACHE:-}",
-    "msg_cache":"${MSG_CACHE:-}",
+    "rrset_cache":"${RRSET_CACHE-}",
+    "msg_cache":"${MSG_CACHE-}",
     "slabs":${SLABS:-0},
     "outgoing_range":${OUTGOING_RANGE:-0},
     "num_queries":${NUM_QUERIES:-0},
@@ -152,7 +153,7 @@ build_telemetry_payload() {
   }
 }
 EOF
-)
+	)
 
 }
 
@@ -162,22 +163,22 @@ EOF
 
 send_heartbeat() {
 
-    build_telemetry_payload
+	build_telemetry_payload
 
-    curl \
-        --silent \
-        --show-error \
-        --user-agent "SmartDNS/${SMARTDNS_VERSION}" \
-        --connect-timeout 10 \
-        --max-time 30 \
-        --retry 2 \
-        --retry-delay 2 \
-        --header "Content-Type: application/json" \
-        --data "${PAYLOAD}" \
-        "${TELEMETRY_URL}" \
-        >/dev/null 2>&1 || return 1
+	curl \
+		--silent \
+		--show-error \
+		--user-agent "SmartDNS/${SMARTDNS_VERSION}" \
+		--connect-timeout 10 \
+		--max-time 30 \
+		--retry 2 \
+		--retry-delay 2 \
+		--header "Content-Type: application/json" \
+		--data "${PAYLOAD}" \
+		"${TELEMETRY_URL}" \
+		>/dev/null 2>&1 || return 1
 
-    return 0
+	return 0
 
 }
 
@@ -187,12 +188,12 @@ send_heartbeat() {
 
 save_install_env() {
 
-    mkdir -p "${TELEMETRY_DIR}"
+	mkdir -p "${TELEMETRY_DIR}"
 
-    cat > "${INSTALL_ENV}" <<EOF
+	cat >"${INSTALL_ENV}" <<EOF
 SMARTDNS_HOME="${BASE_DIR}"
 EOF
 
-    chmod 600 "${INSTALL_ENV}"
+	chmod 600 "${INSTALL_ENV}"
 
 }
