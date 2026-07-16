@@ -65,7 +65,7 @@ addAction(
         KeyValueStoreLookupRule(blocklistKVS,suffixLookupKey),
         QTypeRule(DNSQType.AAAA)
     }),
-    SpoofAction("{{SPOOF_IPV6}}")
+    SpoofAction({{SPOOF_IPV6}})
 )
 
 ----------------------------------------------------
@@ -77,7 +77,7 @@ addAction(
         KeyValueStoreLookupRule(blocklistKVS,suffixLookupKey),
         QTypeRule(DNSQType.A)
     }),
-    SpoofAction("{{SPOOF_IPV4}}")
+    SpoofAction({{SPOOF_IPV4}})
 )
 
 ----------------------------------------------------

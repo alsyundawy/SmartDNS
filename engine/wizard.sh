@@ -38,8 +38,8 @@ run_wizard() {
 		IPV6_STATUS="Not Detected"
 	fi
 
-	SPOOF_IPV4="103.151.222.227"
-	SPOOF_IPV6="2406:20c0::103:151:222:227"
+	SPOOF_IPV4="103.151.222.227,103.151.223.233"
+	SPOOF_IPV6="2406:20c0::103:151:222:227,2406:20c0::103:151:223:233"
 
 	RECURSIVE_PORT=5300
 	FRONTEND_PORT=53
@@ -89,6 +89,9 @@ run_wizard() {
 
 		"")
 
+			SPOOF_IPV4=$(to_lua_array "${SPOOF_IPV4}")
+			SPOOF_IPV6=$(to_lua_array "${SPOOF_IPV6}")
+
 			break
 			;;
 
@@ -100,7 +103,7 @@ run_wizard() {
 
 			if [[ -n ${SERVER_IPV6-} ]]; then
 
-				ENABLE_IPV6=$(ask_yes_no "Enable IPv6? [Y/n] :" "Y")
+				ENABLE_IPV6=$(ask_yes_no "Enable IPv6? [Y/n] (ENTER = default Y) :" "Y")
 
 			fi
 
@@ -110,7 +113,7 @@ run_wizard() {
 
 			while true; do
 
-				RECURSIVE_PORT=$(ask_recursive_port "Recursive Port [${RECURSIVE_PORT}] :" "${RECURSIVE_PORT}")
+				RECURSIVE_PORT=$(ask_recursive_port "Recursive Port [${RECURSIVE_PORT}] (ENTER = default) :" "${RECURSIVE_PORT}")
 
 				if ((RECURSIVE_PORT == 53)); then
 					warn "Recursive Port cannot use port 53."
@@ -127,7 +130,7 @@ run_wizard() {
 
 			while true; do
 
-				FRONTEND_PORT=$(ask_frontend_port "Frontend Port [${FRONTEND_PORT}] :" "${FRONTEND_PORT}")
+				FRONTEND_PORT=$(ask_frontend_port "Frontend Port [${FRONTEND_PORT}] (ENTER = default) :" "${FRONTEND_PORT}")
 
 				if [[ ${FRONTEND_PORT} == "${RECURSIVE_PORT}" ]]; then
 					warn "Frontend Port cannot be the same as Recursive Port (${RECURSIVE_PORT})."
@@ -138,13 +141,32 @@ run_wizard() {
 
 			done
 
+			#################################
+			# Spoof IPv4
+			#################################
+
 			while true; do
-				read -rp "Spoof IPv4 [${SPOOF_IPV4}] : " TMP
+				read -rp "Spoof IPv4 [${SPOOF_IPV4}] (ENTER = default) : " TMP
 
 				TMP=${TMP:-${SPOOF_IPV4}}
 
-				if validate_ipv4 "${TMP}"; then
-					SPOOF_IPV4="${TMP}"
+				OK=yes
+
+				IFS=',' read -ra IPS <<< "${TMP}"
+
+				for IP in "${IPS[@]}"; do
+
+					IP=$(echo "${IP}" | xargs)
+
+					if ! validate_ipv4 "${IP}"; then
+						OK=no
+						break
+					fi
+
+				done
+
+				if [[ ${OK} == "yes" ]]; then
+					SPOOF_IPV4=$(to_lua_array "${TMP}")
 					break
 				fi
 
@@ -152,15 +174,34 @@ run_wizard() {
 
 			done
 
+			#################################
+			# Spoof IPv6
+			#################################
+
 			if [[ ${ENABLE_IPV6} == "yes" ]]; then
 
 				while true; do
-					read -rp "Spoof IPv6 [${SPOOF_IPV6}] : " TMP
+					read -rp "Spoof IPv6 [${SPOOF_IPV6}] (ENTER = default) : " TMP
 
 					TMP=${TMP:-${SPOOF_IPV6}}
 
-					if validate_ipv6 "${TMP}"; then
-						SPOOF_IPV6="${TMP}"
+					OK=yes
+
+					IFS=',' read -ra IPS <<< "${TMP}"
+
+					for IP in "${IPS[@]}"; do
+
+						IP=$(echo "${IP}" | xargs)
+
+						if ! validate_ipv6 "${IP}"; then
+							OK=no
+							break
+						fi
+
+					done
+
+					if [[ ${OK} == "yes" ]]; then
+						SPOOF_IPV6=$(to_lua_array "${TMP}")
 						break
 					fi
 
@@ -168,6 +209,8 @@ run_wizard() {
 
 				done
 
+			else
+				SPOOF_IPV6=$(to_lua_array "${SPOOF_IPV6}")
 			fi
 
 			echo
