@@ -1,10 +1,13 @@
-name: "Security & Linting"
+name: Security and Linting
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
+
+permissions:
+  contents: read
 
 jobs:
   shellcheck:
@@ -13,7 +16,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Install dependencies
         run: |
@@ -21,14 +24,14 @@ jobs:
           sudo apt-get install -y bash curl jq dos2unix shellcheck
 
       - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
+        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # 2.0.0
         with:
-          scandir: '.'
-          ignore_paths: 'cache output docs .git'
-          severity: 'style'
-          format: 'tty'
+          scandir: .
+          ignore_paths: cache output docs .git
+          severity: style
+          format: tty
         env:
-          SHELLCHECK_OPTS: "-e SC1091 -e SC1090 -e SC2086"
+          SHELLCHECK_OPTS: -e SC1091 -e SC1090 -e SC2086
 
   test-install:
     name: Test install.sh & Scripts
@@ -36,7 +39,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Install dependencies for testing
         run: |

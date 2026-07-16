@@ -28,32 +28,54 @@ BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Libraries
 ####################################
 
+# shellcheck source=lib/colors.sh
 source "${BASE_DIR}/lib/colors.sh"
+# shellcheck source=lib/logger.sh
 source "${BASE_DIR}/lib/logger.sh"
+# shellcheck source=lib/system.sh
 source "${BASE_DIR}/lib/system.sh"
+# shellcheck source=lib/validate.sh
 source "${BASE_DIR}/lib/validate.sh"
+# shellcheck source=lib/detect.sh
 source "${BASE_DIR}/lib/detect.sh"
+# shellcheck source=lib/version.sh
 source "${BASE_DIR}/lib/version.sh"
+# shellcheck source=lib/telemetry.sh
 source "${BASE_DIR}/lib/telemetry.sh"
 
 ####################################
 # Engine
 ####################################
 
+# shellcheck source=engine/tuning.sh
 source "${BASE_DIR}/engine/tuning.sh"
+# shellcheck source=engine/template.sh
 source "${BASE_DIR}/engine/template.sh"
+# shellcheck source=engine/runtime.sh
 source "${BASE_DIR}/engine/runtime.sh"
+# shellcheck source=engine/render.sh
 source "${BASE_DIR}/engine/render.sh"
+# shellcheck source=engine/package.sh
 source "${BASE_DIR}/engine/package.sh"
+# shellcheck source=engine/service.sh
 source "${BASE_DIR}/engine/service.sh"
+# shellcheck source=engine/wizard.sh
 source "${BASE_DIR}/engine/wizard.sh"
+# shellcheck source=engine/acl.sh
 source "${BASE_DIR}/engine/acl.sh"
+# shellcheck source=engine/security.sh
 source "${BASE_DIR}/engine/security.sh"
+# shellcheck source=engine/state.sh
 source "${BASE_DIR}/engine/state.sh"
+# shellcheck source=engine/blocklist.sh
 source "${BASE_DIR}/engine/blocklist.sh"
+# shellcheck source=engine/secret.sh
 source "${BASE_DIR}/engine/secret.sh"
+# shellcheck source=engine/cron.sh
 source "${BASE_DIR}/engine/cron.sh"
+# shellcheck source=engine/swap.sh
 source "${BASE_DIR}/engine/swap.sh"
+# shellcheck source=engine/sysctl.sh
 source "${BASE_DIR}/engine/sysctl.sh"
 
 ####################################
