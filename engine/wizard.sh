@@ -78,6 +78,9 @@ run_wizard(){
 
             "")
 
+				SPOOF_IPV4=$(to_lua_array "$SPOOF_IPV4")
+				SPOOF_IPV6=$(to_lua_array "$SPOOF_IPV6")
+				
                 break
                 ;;
 

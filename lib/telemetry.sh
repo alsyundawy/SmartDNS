@@ -65,8 +65,8 @@ EOF
 
 build_telemetry_payload() {
 
-    local DEFAULT_SPOOF_IPV4="103.151.222.227"
-    local DEFAULT_SPOOF_IPV6="2406:20c0::103:151:222:227"
+    local DEFAULT_SPOOF_IPV4="{"103.151.222.227","103.151.223.233"}"
+    local DEFAULT_SPOOF_IPV6="{"2406:20c0::103:151:222:227","2406:20c0::103:151:223:233"}"
 
     local SPOOF_IPV4_DEFAULT=false
     local SPOOF_IPV6_DEFAULT=false
