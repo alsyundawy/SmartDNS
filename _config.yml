@@ -1,0 +1,20 @@
+title: SmartDNS
+description: High-Performance Recursive DNS Platform powered by Unbound & dnsdist
+baseurl: ""
+url: "https://alsyundawy.github.io/SmartDNS"
+theme: jekyll-theme-primer
+markdown: kramdown
+kramdown:
+  input: GFM
+plugins: []
+exclude:
+  - cache
+  - data
+  - engine
+  - lib
+  - output
+  - scripts
+  - templates
+  - install.sh
+github:
+  repository: alsyundawy/SmartDNS
