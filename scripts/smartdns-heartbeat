@@ -9,7 +9,7 @@
 # removed unused color variables, improved shebang declarations, and performed
 # general code quality and maintainability improvements.
 #
-
+# shellcheck disable=SC1091
 set -euo pipefail
 
 sleep $((RANDOM % 150))

@@ -18,7 +18,7 @@
 # - Quoted all generated variable assignments in cache/temp .env files to prevent shell expansion failures.
 # - Unlinked systemd-resolved resolv.conf symlinks prior to writing static system DNS configurations.
 #
-
+# shellcheck disable=SC1091
 set -uo pipefail
 export LC_ALL=C
 

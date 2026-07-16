@@ -234,31 +234,27 @@ EOF
 
 }
 
-####################################
-# To LUA Array
-####################################
-
 to_lua_array() {
 
-    local list="$1"
-    local out="{"
-    local first=1
+	local list="${1}"
+	local out="{"
+	local first=1
 
-    IFS=',' read -ra IPS <<< "$list"
+	IFS=',' read -ra IPS <<< "${list}"
 
-    for ip in "${IPS[@]}"; do
+	for ip in "${IPS[@]}"; do
 
-        ip="$(echo "$ip" | xargs)"
+		ip="$(echo "${ip}" | xargs)"
 
-        [[ $first -eq 0 ]] && out+=","
+		[[ ${first} -eq 0 ]] && out+=","
 
-        out+="\"$ip\""
+		out+="\"${ip}\""
 
-        first=0
+		first=0
 
-    done
+	done
 
-    out+="}"
+	out+="}"
 
-    printf '%s' "$out"
+	printf '%s' "${out}"
 }
