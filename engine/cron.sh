@@ -14,6 +14,8 @@
 # - Sourced LC_ALL=C locale execution for consistent English command output parsing.
 # - Improved telemetry UUID generation with stable kernel-based /proc/sys/kernel/random/uuid fallback.
 # - Pointed cron updater scheduler to permanent /opt/blocklist/update-blocklist.sh script.
+# - Added @reboot cron entry to ensure 127.0.1.1 SmartDNS is present in /etc/hosts on every boot.
+#   (Merged from ichandkusuma/SmartDNS)
 #
 
 ####################################
@@ -37,6 +39,9 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # SmartDNS Auto Update
 ${MINUTE} ${HOUR} * * * root /opt/blocklist/update-blocklist.sh >>/var/log/smartdns-blocklist.log 2>&1
+
+# SmartDNS Hosts
+@reboot root /bin/bash -c 'grep -qxF "127.0.1.1 SmartDNS" /etc/hosts || echo "127.0.1.1 SmartDNS" >> /etc/hosts'
 EOF
 
 	chmod 644 /etc/cron.d/smartdns

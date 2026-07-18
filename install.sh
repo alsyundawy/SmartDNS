@@ -17,6 +17,8 @@
 # - Added openssl package to installation lists to guarantee key generation succeeds.
 # - Quoted all generated variable assignments in cache/temp .env files to prevent shell expansion failures.
 # - Unlinked systemd-resolved resolv.conf symlinks prior to writing static system DNS configurations.
+# - Added Resolve Host entry (127.0.1.1 SmartDNS) to /etc/hosts to ensure local hostname resolution
+#   succeeds for package manager and service operations. (Merged from ichandkusuma/SmartDNS)
 #
 # shellcheck disable=SC1091
 set -uo pipefail
@@ -217,6 +219,10 @@ if [[ ${INSTALL_PACKAGE} =~ ^[Yy]$ ]]; then
 	info "Setting Hostname..."
 	hostnamectl set-hostname SmartDNS
 	success "Hostname set to SmartDNS."
+
+	info "Setting Resolve Host..."
+	grep -qxF "127.0.1.1 SmartDNS" /etc/hosts || echo "127.0.1.1 SmartDNS" | sudo tee -a /etc/hosts
+	success "Resolve Host set to SmartDNS."
 
 	wait_package_manager || exit 1
 

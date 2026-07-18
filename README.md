@@ -103,6 +103,7 @@ flowchart TD
 - **dnsdist Frontend Load Balancer**: Blazing fast query routing, packet caching, and request distribution.
 - **TrustPositif Blocklist Integration**: Local domain database converted into tinycdb (CDB) format for microsecond-level query filtering and custom A/AAAA spoofing.
 - **Resilient Environment Controls**: Resolves port 53 binding conflicts on systemd-resolved systems safely.
+- **Resolve Host Configuration**: Automatically registers `127.0.1.1 SmartDNS` in `/etc/hosts` to ensure local hostname resolution succeeds on every boot.
 - **Dual-Stack IPv4/IPv6**: Native compatibility with modern networks.
 - **Interactive Customization**: Fast default configuration or customizable install options (spoof IPs, ports, and passwords).
 
@@ -198,6 +199,7 @@ flowchart TD
 - **Frontend Load Balancer dnsdist**: Perutean kueri super cepat, caching paket, dan distribusi beban.
 - **Integrasi Blocklist TrustPositif**: Database domain lokal dikonversi ke format tinycdb (CDB) untuk penyaringan super cepat dan teknik spoofing A/AAAA otomatis.
 - **Resolusi Konflik Port 53**: Mengatasi masalah bentrok port binding dengan systemd-resolved pada OS modern secara aman.
+- **Konfigurasi Resolve Host**: Mendaftarkan `127.0.1.1 SmartDNS` ke `/etc/hosts` secara otomatis agar hostname lokal dapat di-resolve dengan benar setiap kali sistem boot.
 - **Dukungan Dual-Stack**: Berjalan lancar di lingkungan IPv4 maupun IPv6.
 - **Kustomisasi Wizard**: Pilihan pemasangan otomatis standar atau mode kustom (pengaturan IP spoof, port, dan kata sandi).
 
