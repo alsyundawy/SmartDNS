@@ -40,6 +40,7 @@ Developed and maintained by <a href="https://mynoc.id/" target="_blank">**MyNOC.
 [![GitHub Issues](https://img.shields.io/github/issues/alsyundawy/SmartDNS)](https://github.com/alsyundawy/SmartDNS/issues)
 [![GitHub Pull Requests](https://img.shields.io/github/issues-pr/alsyundawy/SmartDNS)](https://github.com/alsyundawy/SmartDNS/pulls)
 [![Donate with PayPal](https://img.shields.io/badge/PayPal-donate-orange)](https://www.paypal.me/alsyundawy)
+[![Donate with Ko-fi](https://img.shields.io/badge/Ko--fi-donate-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/alsyundawy)
 [![Sponsor with GitHub](https://img.shields.io/badge/GitHub-sponsor-orange)](https://github.com/sponsors/alsyundawy)
 [![GitHub Forks](https://img.shields.io/github/forks/alsyundawy/SmartDNS?style=social)](https://github.com/alsyundawy/SmartDNS/network/members)
 [![GitHub Contributors](https://img.shields.io/github/contributors/alsyundawy/SmartDNS?style=social)](https://github.com/alsyundawy/SmartDNS/graphs/contributors)
