@@ -412,3 +412,5 @@ _Disclaimer: Proyek ini ditujukan untuk lingkungan edukasi, lab, enterprise, ISP
 Made with ❤️ in Indonesia by <a href="https://mynoc.id/" target="_blank">**MyNOC.ID**</a> & <a href="https://alsyundawy.com" target="_blank">**ALSYUNDAWY IT SOLUTION**</a>
 
 </div>
+
+![Alt](https://repobeats.axiom.co/api/embed/88126d0219407cd5e3eb0700340faac466a52994.svg "Repobeats analytics image")
