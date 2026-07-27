@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 #
 # CHANGELOG:
-# Standardized variable expansion by consistently using ${VAR} across all shell
-# scripts to improve readability, consistency, and safety. This follows shell
-# scripting best practices and helps prevent issues related to word splitting
-# and pathname expansion (globbing). Additionally, fixed ShellCheck warnings,
-# corrected Markdown formatting errors, added appropriate ShellCheck directives,
-# removed unused color variables, improved shebang declarations, and performed
-# general code quality and maintainability improvements.
+# - Released v1.0.1-shellcheck-optimizer with full ShellCheck compliance and strict bash standards.
+# - Added ENABLE_AUTO_UPDATE option to Smart Installation Wizard.
+# - Saved ENABLE_AUTO_UPDATE to cache/wizard.env for state persistence.
+# - Standardized variable expansion by consistently using ${VAR} across all shell
+#   scripts to improve readability, consistency, and safety. This follows shell
+#   scripting best practices and helps prevent issues related to word splitting
+#   and pathname expansion (globbing). Additionally, fixed ShellCheck warnings,
+#   corrected Markdown formatting errors, added appropriate ShellCheck directives,
+#   removed unused color variables, improved shebang declarations, and performed
+#   general code quality and maintainability improvements.
 #
 
 #########################################
@@ -25,10 +28,12 @@ run_wizard() {
 	ENABLE_DNSSEC="yes"
 	ENABLE_RATELIMIT="yes"
 	ENABLE_QUERYLOG="no"
+	ENABLE_AUTO_UPDATE="yes"
 
 	DNSSEC_STATUS="Enabled"
 	RATELIMIT_STATUS="Enabled"
 	QUERYLOG_STATUS="Disabled"
+	AUTO_UPDATE_STATUS="Enabled"
 
 	if [[ -n ${SERVER_IPV6-} ]]; then
 		ENABLE_IPV6="yes"
@@ -72,6 +77,7 @@ run_wizard() {
 	printf "%-20s : %s\n" "DNSSEC" "${DNSSEC_STATUS}"
 	printf "%-20s : %s\n" "Rate Limit" "${RATELIMIT_STATUS}"
 	printf "%-20s : %s\n" "Query Log" "${QUERYLOG_STATUS}"
+	printf "%-20s : %s\n" "Auto Update" "${AUTO_UPDATE_STATUS}"
 	printf "%-20s : %s\n" "Recursive Port" "${RECURSIVE_PORT}"
 	printf "%-20s : %s\n" "Frontend Port" "${FRONTEND_PORT}"
 
@@ -106,6 +112,14 @@ run_wizard() {
 				ENABLE_IPV6=$(ask_yes_no "Enable IPv6? [Y/n] (ENTER = default Y) :" "Y")
 
 			fi
+
+			#################################
+			# Automatic Update
+			#################################
+
+			ENABLE_AUTO_UPDATE=$(ask_yes_no \
+				"Enable Automatic Update? [Y/n] (ENTER = default Y) :" \
+				"Y")
 
 			#################################
 			# Recursive Port
@@ -241,6 +255,7 @@ ENABLE_IPV6="${ENABLE_IPV6}"
 ENABLE_DNSSEC="${ENABLE_DNSSEC}"
 ENABLE_RATELIMIT="${ENABLE_RATELIMIT}"
 ENABLE_QUERYLOG="${ENABLE_QUERYLOG}"
+ENABLE_AUTO_UPDATE="${ENABLE_AUTO_UPDATE}"
 RECURSIVE_PORT="${RECURSIVE_PORT}"
 FRONTEND_PORT="${FRONTEND_PORT}"
 SPOOF_IPV4="${SPOOF_IPV4}"

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #
 # CHANGELOG:
+# - Released v1.0.1-shellcheck-optimizer with full ShellCheck compliance and strict bash standards.
+# - Added automatic_update_scheduler function to manage /etc/cron.d/smartdns-update for patch updates.
 # - Standardized variable expansion by consistently using ${VAR} across all shell
 #   scripts to improve readability, consistency, and safety.
 # - Fixed ShellCheck warnings.
@@ -38,7 +40,7 @@ SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # SmartDNS Auto Update
-${MINUTE} ${HOUR} * * * root /opt/blocklist/update-blocklist.sh >>/var/log/smartdns-blocklist.log 2>&1
+${MINUTE} ${HOUR} * * * root ${BASE_DIR}/data/update-blocklist.sh >>/var/log/smartdns-blocklist.log 2>&1
 
 # SmartDNS Hosts
 @reboot root /bin/bash -c 'grep -qxF "127.0.1.1 SmartDNS" /etc/hosts || echo "127.0.1.1 SmartDNS" >> /etc/hosts'
@@ -78,5 +80,49 @@ install_heartbeat_scheduler() {
 		systemctl restart cron >/dev/null 2>&1
 
 	success "Heartbeat scheduler installed."
+
+}
+
+#########################################
+# Automatic Update Scheduler
+#########################################
+
+automatic_update_scheduler() {
+
+	if [[ "${ENABLE_AUTO_UPDATE:-yes}" == "yes" ]]; then
+
+		info "Installing Automatic Update Scheduler..."
+
+		# Pastikan cron aktif
+		systemctl enable --now cron >/dev/null 2>&1 || true
+
+		# Random schedule (sekali saat install)
+		HOUR=$((RANDOM % 6))    # 00-05
+		MINUTE=$((RANDOM % 60)) # 00-59
+
+		cat >/etc/cron.d/smartdns-update <<EOF
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# SmartDNS Patch Auto Update
+${MINUTE} ${HOUR} * * * root ${BASE_DIR}/update.sh --patch >> /var/log/smartdns-update.log 2>&1
+EOF
+
+		chmod 644 /etc/cron.d/smartdns-update
+
+		# Reload cron
+		systemctl reload cron >/dev/null 2>&1 ||
+			systemctl restart cron >/dev/null 2>&1
+
+		success "Automatic update scheduler installed."
+		info "Automatic Update scheduled daily at $(printf "%02d:%02d" "${HOUR}" "${MINUTE}")."
+
+	else
+
+		rm -f /etc/cron.d/smartdns-update
+
+		info "Automatic Update disabled."
+
+	fi
 
 }

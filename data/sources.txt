@@ -1,2 +1,2 @@
-https://raw.githubusercontent.com/alsyundawy/TrustPositif/refs/heads/main/sunat-trustpositif.txt
-https://smartdns.mynoc.id/data/domains_isp
+merge https://repo.alsyundawy.com/TrustPositif/sunat-trustpositif-v3.0.txt
+fallback https://repo.alsyundawy.com/TrustPositif/sunat-trustpositif-v3.1.txt

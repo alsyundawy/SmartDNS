@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 #
 # CHANGELOG:
+# - Released v1.0.1-shellcheck-optimizer with full ShellCheck compliance and strict bash standards.
+# - Added Automatic Update Patch engine (update.sh --patch) with self-update re-execution logic.
+# - Integrated automatic_update_scheduler into installation pipeline for daily off-peak update management.
 # - Standardized variable expansion by consistently using ${VAR} across all shell
 #   scripts to improve readability, consistency, and safety.
 # - Fixed ShellCheck warnings.
@@ -257,6 +260,9 @@ if [[ ${INSTALL_PACKAGE} =~ ^[Yy]$ ]]; then
 
 	info "Installing Heartbeat Scheduler..."
 	install_heartbeat_scheduler || exit 1
+
+	info "Automatic Update Status..."
+	automatic_update_scheduler || exit 1
 
 	info "Validating configuration..."
 	validate_config || exit 1

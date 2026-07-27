@@ -1,6 +1,12 @@
 <!-- markdownlint-disable MD033 MD041 -->
 <!--
 CHANGELOG:
+- Released v1.0.1-shellcheck-optimizer with full ShellCheck compliance and strict bash standards.
+- Added Automatic Update Patch engine (update.sh --patch) with self-update re-execution logic.
+- Integrated multi-source blocklist downloader with merge and fallback URL directives.
+- Added automatic_update_scheduler for daily off-peak update management in /etc/cron.d/smartdns-update.
+- Standardized variable expansion and double quoting across all core library and engine modules.
+- Enhanced signal trap handlers and temporary file cleanup routines using mktemp.
 - Standardized variable expansion by consistently using ${VAR} across all shell
   scripts to improve readability, consistency, and safety.
 - Fixed ShellCheck warnings.
@@ -30,7 +36,7 @@ Developed and maintained by <a href="https://mynoc.id/" target="_blank">**MyNOC.
 
 ---
 
-[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)](https://github.com/alsyundawy/SmartDNS/releases)
+[![Version](https://img.shields.io/badge/version-1.0.1--shellcheck--optimizer-brightgreen.svg)](https://github.com/alsyundawy/SmartDNS/releases)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04__24.04__26.04-E95420?logo=ubuntu)
 ![Debian](https://img.shields.io/badge/Debian-11__12__13-A81D33?logo=debian)
 ![Bash](https://img.shields.io/badge/bash-%3E%3D4.0-41bf24.svg?logo=gnu-bash)
@@ -112,6 +118,7 @@ flowchart TD
 
 - **Heartbeat Scheduler**: Cron-based health check reporting status every 5 minutes.
 - **Autonomous Updater**: Automated daily database sync for ad and malware blocklists.
+- **Automatic Update Patch**: Automated engine patch updates and blocklist maintenance via update script.
 - **DNSDist Web UI Console**: Dedicated admin monitoring dashboard.
 
 ---
@@ -147,6 +154,14 @@ Upgrades are completely non-destructive and retain: UUID, configuration paramete
 cd SmartDNS
 git pull
 bash install.sh
+```
+
+### Automatic Update Patch
+
+Apply code patches, update blocklists, and sync service state automatically:
+
+```bash
+bash update.sh --patch
 ```
 
 ---
@@ -208,6 +223,7 @@ flowchart TD
 
 - **Penjadwal Heartbeat**: Pengiriman metrik kesehatan dan status server otomatis setiap 5 menit.
 - **Pembaruan Mandiri**: Sinkronisasi database blocklist iklan dan malware harian melalui cron job.
+- **Automatic Update Patch**: Pembaruan otomatis patch engine dan blocklist melalui skrip update.
 - **Dasbor Web UI dnsdist**: Konsol manajemen web interaktif untuk memantau performa.
 
 ---
@@ -245,6 +261,14 @@ git pull
 bash install.sh
 ```
 
+### Pembaruan Patch Otomatis
+
+Menerapkan patch kode, memperbarui blocklist, dan mendistribusikan pembaruan status layanan secara otomatis:
+
+```bash
+bash update.sh --patch
+```
+
 ---
 
 ## ⚙️ Service Ports / Port Layanan
@@ -271,6 +295,7 @@ SmartDNS/
 ├── templates/     # Configuration templates / Templat konfigurasi dasar
 ├── VERSION        # Release version / Versi rilis
 ├── install.sh     # Installation entrypoint / Berkas utama instalasi
+├── update.sh      # Patch & update entrypoint / Berkas pembaruan patch
 └── README.md      # Documentation / Dokumentasi ini
 ```
 

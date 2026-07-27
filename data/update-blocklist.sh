@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 #
 # CHANGELOG:
-# Standardized variable expansion by consistently using ${VAR} across all shell
-# scripts to improve readability, consistency, and safety. This follows shell
-# scripting best practices and helps prevent issues related to word splitting
-# and pathname expansion (globbing). Additionally, fixed ShellCheck warnings,
-# corrected Markdown formatting errors, added appropriate ShellCheck directives,
-# removed unused color variables, improved shebang declarations, and performed
-# general code quality and maintainability improvements.
+# - Released v1.0.1-shellcheck-optimizer with full ShellCheck compliance and strict bash standards.
+# - Added support for multi-source 'merge' and resiliency 'fallback' blocklist directives.
+# - Added fallback processing logic for domain list downloads.
+# - Standardized variable expansion by consistently using ${VAR} across all shell
+#   scripts to improve readability, consistency, and safety. This follows shell
+#   scripting best practices and helps prevent issues related to word splitting
+#   and pathname expansion (globbing). Additionally, fixed ShellCheck warnings,
+#   corrected Markdown formatting errors, added appropriate ShellCheck directives,
+#   removed unused color variables, improved shebang declarations, and performed
+#   general code quality and maintainability improvements.
 #
 
 set -euo pipefail
@@ -80,15 +83,12 @@ date | tee -a "${LOG}"
 echo "======================================" | tee -a "${LOG}"
 
 #########################################
-# Download Sources
+# Download Helper
 #########################################
 
-SUCCESS=0
-
-while read -r URL; do
-	[[ -z ${URL} || ${URL} =~ ^# ]] && continue
-
-	echo "Trying ${URL}" | tee -a "${LOG}"
+download_source() {
+	local URL="$1"
+	local DOWNLOAD
 
 	DOWNLOAD=$(mktemp)
 
@@ -102,13 +102,12 @@ while read -r URL; do
 		"${URL}" \
 		-o "${DOWNLOAD}"; then
 
-		# Pastikan file tidak kosong
-		if [[ -s ${DOWNLOAD} ]] && ! grep -qi "<html" "${DOWNLOAD}"; then
-			cp "${DOWNLOAD}" "${RAW}"
-			SUCCESS=1
+		if [[ -s "${DOWNLOAD}" ]] && ! grep -qi "<html" "${DOWNLOAD}"; then
+			cat "${DOWNLOAD}" >> "${RAW}"
+			echo >> "${RAW}"
 			echo "Success: ${URL}" | tee -a "${LOG}"
 			rm -f "${DOWNLOAD}"
-			break
+			return 0
 		fi
 
 		echo "Invalid content: ${URL}" | tee -a "${LOG}"
@@ -117,32 +116,72 @@ while read -r URL; do
 	fi
 
 	rm -f "${DOWNLOAD}"
+	return 1
+}
 
-done <"${SOURCE}"
+#########################################
+# Process Sources
+#########################################
 
-if [[ ${SUCCESS} -eq 0 ]]; then
-	echo "All sources failed." | tee -a "${LOG}"
-	exit 1
+SUCCESS=1
+FALLBACK_URL=""
+
+: > "${RAW}"
+
+while read -r TYPE URL || [[ -n "${TYPE:-}" ]]; do
+	[[ -z "${TYPE:-}" || "${TYPE}" =~ ^# ]] && continue
+
+	# Handle backward compatibility if single line URL provided without TYPE
+	if [[ "${TYPE}" =~ ^https?:// ]]; then
+		URL="${TYPE}"
+		TYPE="merge"
+	fi
+
+	case "${TYPE}" in
+		merge)
+			echo "Trying ${URL}" | tee -a "${LOG}"
+			if ! download_source "${URL}"; then
+				SUCCESS=0
+			fi
+			;;
+		fallback)
+			FALLBACK_URL="${URL}"
+			;;
+	esac
+done < "${SOURCE}"
+
+#########################################
+# Fallback Handler
+#########################################
+
+if [[ "${SUCCESS}" -eq 0 ]]; then
+	echo "Merge source failed, using fallback..." | tee -a "${LOG}"
+
+	: > "${RAW}"
+
+	if [[ -n "${FALLBACK_URL}" ]]; then
+		if ! download_source "${FALLBACK_URL}"; then
+			echo "Fallback download failed." | tee -a "${LOG}"
+			exit 1
+		fi
+	else
+		echo "No fallback URL defined and merge failed." | tee -a "${LOG}"
+		exit 1
+	fi
 fi
 
 #########################################
 # Validation
 #########################################
 
-if [[ ! -s ${RAW} ]]; then
-
+if [[ ! -s "${RAW}" ]]; then
 	echo "Download failed." | tee -a "${LOG}"
-
 	exit 1
-
 fi
 
 if grep -qi "<html" "${RAW}"; then
-
 	echo "Downloaded HTML page." | tee -a "${LOG}"
-
 	exit 1
-
 fi
 
 #########################################
@@ -155,18 +194,15 @@ grep -Eo '([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})' "${RAW}" |
 	sed 's/^\.//' |
 	tr '[:upper:]' '[:lower:]' |
 	sort -u \
-		>"${NEW}"
+		> "${NEW}"
 
-COUNT=$(wc -l <"${NEW}")
+COUNT=$(wc -l < "${NEW}")
 
 echo "Domains : ${COUNT}" | tee -a "${LOG}"
 
 if ((COUNT < 1000)); then
-
 	echo "Blocklist too small. Update cancelled." | tee -a "${LOG}"
-
 	exit 1
-
 fi
 
 #########################################
@@ -175,7 +211,7 @@ fi
 
 mv "${NEW}" "${TMP}"
 
-TOTAL=$(wc -l <"${TMP}")
+TOTAL=$(wc -l < "${TMP}")
 
 echo "Replacing blocklist (${TOTAL} domains)" | tee -a "${LOG}"
 
@@ -192,16 +228,13 @@ awk '{
 }
 END{
     print ""
-}' "${FINAL}" >"${CDB_INPUT}"
+}' "${FINAL}" > "${CDB_INPUT}"
 
-cdbmake "${CDB_TMP}" "${WORKDIR}/cdbmake.tmp" <"${CDB_INPUT}"
+cdbmake "${CDB_TMP}" "${WORKDIR}/cdbmake.tmp" < "${CDB_INPUT}"
 
-if [[ ! -s ${CDB_TMP} ]]; then
-
+if [[ ! -s "${CDB_TMP}" ]]; then
 	echo "CDB build failed." | tee -a "${LOG}"
-
 	exit 1
-
 fi
 
 mv "${CDB_TMP}" "${CDB_FILE}"
@@ -215,15 +248,10 @@ echo "CDB build completed." | tee -a "${LOG}"
 echo "Reloading dnsdist..." | tee -a "${LOG}"
 
 if dnsdist -c -e "reloadConfig"; then
-
 	echo "dnsdist reloaded." | tee -a "${LOG}"
-
 else
-
 	echo "dnsdist reload failed." | tee -a "${LOG}"
-
 	exit 1
-
 fi
 
 #########################################
