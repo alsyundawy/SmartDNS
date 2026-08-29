@@ -31,15 +31,3 @@ install_blocklist(){
     success "Blocklist installed."
 
 }
-
-#########################################
-# OLD Cron Remove
-#########################################
-
-install_blocklist_cron(){
-
-cat >/etc/cron.d/smartdns-blocklist <<EOF
-
-EOF
-	rm /etc/cron.d/smartdns-blocklist
-}

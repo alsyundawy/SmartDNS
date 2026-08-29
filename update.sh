@@ -3,63 +3,115 @@
 set -uo pipefail
 
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
-cd "$BASE_DIR" || exit 1
 
-####################################
-# Load Libraries & Engine
-####################################
+#########################################
+# Libraries
+#########################################
 
-load_modules() {
+source "$BASE_DIR/lib/colors.sh"
+source "$BASE_DIR/lib/logger.sh"
+source "$BASE_DIR/lib/system.sh"
+source "$BASE_DIR/lib/version.sh"
+source "$BASE_DIR/lib/telemetry.sh"
 
-    ####################################
-    # Libraries
-    ####################################
+#########################################
+# Engine
+#########################################
 
-    source "$BASE_DIR/lib/colors.sh"
-    source "$BASE_DIR/lib/logger.sh"
-    source "$BASE_DIR/lib/system.sh"
-    source "$BASE_DIR/lib/validate.sh"
-    source "$BASE_DIR/lib/detect.sh"
-    source "$BASE_DIR/lib/version.sh"
-    source "$BASE_DIR/lib/telemetry.sh"
+source "$BASE_DIR/engine/service.sh"
+source "$BASE_DIR/engine/blocklist.sh"
+source "$BASE_DIR/engine/cron.sh"
+source "$BASE_DIR/engine/state.sh"
 
-    ####################################
-    # Engine
-    ####################################
-
-    source "$BASE_DIR/engine/tuning.sh"
-    source "$BASE_DIR/engine/template.sh"
-    source "$BASE_DIR/engine/runtime.sh"
-    source "$BASE_DIR/engine/render.sh"
-    source "$BASE_DIR/engine/package.sh"
-    source "$BASE_DIR/engine/service.sh"
-    source "$BASE_DIR/engine/wizard.sh"
-    source "$BASE_DIR/engine/acl.sh"
-    source "$BASE_DIR/engine/security.sh"
-    source "$BASE_DIR/engine/state.sh"
-    source "$BASE_DIR/engine/blocklist.sh"
-    source "$BASE_DIR/engine/secret.sh"
-    source "$BASE_DIR/engine/cron.sh"
-    source "$BASE_DIR/engine/swap.sh"
-    source "$BASE_DIR/engine/sysctl.sh"
-}
-
-load_modules
-
-####################################
-# Menu
-####################################
+#########################################
+# Usage
+#########################################
 
 usage() {
-cat <<EOF
+
+    cat <<EOF2
 Usage:
     $0 --patch
     $0 --help
 
 Options:
     --patch    Update SmartDNS
-EOF
+EOF2
+
 }
+
+#########################################
+# Check Git
+#########################################
+
+check_git() {
+
+    if ! command -v git >/dev/null 2>&1; then
+        error "Git is not installed."
+        return 1
+    fi
+
+    if ! git -C "$BASE_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        error "SmartDNS directory is not a Git repository."
+        return 1
+    fi
+
+}
+
+#########################################
+# Check Repository Update
+#########################################
+
+check_repository_update() {
+
+    info "Checking Repository..."
+
+    git -C "$BASE_DIR" fetch origin || {
+        error "Failed to fetch repository."
+        return 1
+    }
+
+    local CURRENT_COMMIT
+    local REMOTE_COMMIT
+
+    CURRENT_COMMIT=$(git -C "$BASE_DIR" rev-parse HEAD)
+    REMOTE_COMMIT=$(git -C "$BASE_DIR" rev-parse origin/main)
+
+    if [[ "$CURRENT_COMMIT" == "$REMOTE_COMMIT" ]]; then
+
+        success "Repository already up to date."
+        return 1
+
+    fi
+
+    info "Repository update available."
+    info "Current : ${CURRENT_COMMIT}"
+    info "Remote  : ${REMOTE_COMMIT}"
+
+    return 0
+
+}
+
+#########################################
+# Update Repository
+#########################################
+
+update_repository() {
+
+    info "Updating Repository..."
+
+    git -C "$BASE_DIR" reset --hard origin/main || {
+        error "Failed to update repository."
+        return 1
+    }
+
+    success "Repository updated."
+
+}
+
+#########################################
+# Main
+#########################################
 
 case "${1:-}" in
 
@@ -67,146 +119,64 @@ case "${1:-}" in
 
         banner
 
-        ####################################
-        # Update Repository
-        ####################################
+        info "Checking root..."
 
-        info "Update Repositories..."
-
-        git fetch origin || exit 1
-
-        OLD_COMMIT=$(git rev-parse HEAD)
-        NEW_COMMIT=$(git rev-parse origin/main)
-
-        REPO_UPDATED=false
-
-		if [[ "$OLD_COMMIT" == "$NEW_COMMIT" ]]; then
-
-			REPO_UPDATED=false
-
-			success "Repository already up to date."
-
-		else
-
-			git reset --hard origin/main || exit 1
-
-			success "Repository updated."
-
-			info "Reloading updated updater..."
-
-			exec "$BASE_DIR/update.sh" --patch
-
-		fi
-
-        ####################################
-        # Update Telemetry Heartbeat
-        ####################################
-
-        info "Updating Telemetry Heartbeat..."
-
-        if [[ -f "$BASE_DIR/scripts/smartdns-heartbeat" ]]; then
-
-            install -m 755 \
-                "$BASE_DIR/scripts/smartdns-heartbeat" \
-                /usr/local/bin/smartdns-heartbeat
-
-            success "Telemetry heartbeat updated."
-
-        else
-
-            warn "Telemetry heartbeat script not found."
-
+        if [[ "$EUID" -ne 0 ]]; then
+            error "This command must be run as root."
+            exit 1
         fi
 
-        ####################################
-        # Update Blocklist
-        ####################################
+        check_git || exit 1
 
-        if [[ "$REPO_UPDATED" == true ]]; then
+        #####################################
+        # Check for repository changes
+        #####################################
 
-            info "Updating Blocklist..."
-
-            install_blocklist || exit 1
-
-        else
-
-            info "Repository unchanged. Skipping Blocklist update."
-
+        if ! check_repository_update; then
+            exit 0
         fi
 
-        ####################################
-        # Automatic Update Scheduler
-        ####################################
+        #####################################
+        # Repository changed
+        #####################################
 
-        if [[ -r cache/wizard.env ]]; then
-            source cache/wizard.env
-        fi
+        update_repository || exit 1
 
-        ENABLE_AUTO_UPDATE="${ENABLE_AUTO_UPDATE:-yes}"
+        #####################################
+        # Reload functions from updated tree
+        #####################################
 
-        info "Check Automatic Update..."
+        source "$BASE_DIR/engine/update.sh"
+        source "$BASE_DIR/engine/service.sh"
+        source "$BASE_DIR/engine/blocklist.sh"
+        source "$BASE_DIR/engine/cron.sh"
+        source "$BASE_DIR/engine/state.sh"
 
-        automatic_update_scheduler || exit 1
+        #####################################
+        # Update all features
+        #####################################
 
-        if [[ -f cache/wizard.env ]]; then
+        update_features || exit 1
 
-            if grep -q '^ENABLE_AUTO_UPDATE=' cache/wizard.env; then
-
-                sed -i \
-                    "s/^ENABLE_AUTO_UPDATE=.*/ENABLE_AUTO_UPDATE=$ENABLE_AUTO_UPDATE/" \
-                    cache/wizard.env
-
-            else
-
-                echo "ENABLE_AUTO_UPDATE=$ENABLE_AUTO_UPDATE" >> cache/wizard.env
-
-            fi
-
-        fi
-
-        ####################################
-        # Restart Services
-        ####################################
-
-        if [[ "$REPO_UPDATED" == true ]]; then
-
-            info "Restarting Services..."
-
-            restart_services || exit 1
-
-        else
-
-            info "Repository unchanged. Skipping service restart."
-
-        fi
-
-        ####################################
+        #####################################
         # Save State
-        ####################################
+        #####################################
 
         save_state SERVICE
 
-        success "Update completed."
+        success "SmartDNS update completed."
 
         ;;
 
     --help)
 
-        cat <<EOF
-Usage:
-    $0 --patch
-    $0 --help
-
-Options:
-    --patch    Update SmartDNS
-EOF
+        usage
         ;;
 
     *)
 
         usage
         exit 1
-
         ;;
 
 esac

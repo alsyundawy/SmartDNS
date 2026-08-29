@@ -14,6 +14,8 @@ PACKAGES=(
     jq
     ca-certificates
     freecdb
+    cron
+    git
 )
 
 #########################################
@@ -161,7 +163,9 @@ verify_packages() {
         unzip \
         jq \
         ca-certificates \
-        freecdb
+        freecdb \
+        cron \
+        git
     do
         if dpkg -s "$PKG" >/dev/null 2>&1; then
             success "$PKG installed"

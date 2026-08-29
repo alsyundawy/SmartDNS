@@ -207,8 +207,6 @@ if [[ "$INSTALL_PACKAGE" =~ ^[Yy]$ ]]; then
 	info "Installing Scheduler Update..."
 	install_scheduler || exit 1
 
-	info "Installing Blocklist Scheduler..."
-	install_blocklist_cron || exit 1
 
 	info "Installing Heartbeat Scheduler..."
 	install_heartbeat_scheduler || exit 1

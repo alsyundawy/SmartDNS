@@ -257,16 +257,22 @@ echo "CDB build completed." | tee -a "$LOG"
 
 echo "Reloading dnsdist..." | tee -a "$LOG"
 
-if dnsdist -c -e "reloadConfig"
-then
+if systemctl is-active --quiet dnsdist; then
 
-    echo "dnsdist reloaded." | tee -a "$LOG"
+    if dnsdist -c -e "reloadConfig"; then
+
+        echo "dnsdist reloaded." | tee -a "$LOG"
+
+    else
+
+        echo "dnsdist reload failed." | tee -a "$LOG"
+        exit 1
+
+    fi
 
 else
 
-    echo "dnsdist reload failed." | tee -a "$LOG"
-
-    exit 1
+    echo "dnsdist is not running. Reload skipped." | tee -a "$LOG"
 
 fi
 

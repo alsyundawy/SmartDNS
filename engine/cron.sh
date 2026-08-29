@@ -1,6 +1,45 @@
 #!/usr/bin/env bash
 
 ####################################
+# Ensure Cron
+####################################
+
+ensure_cron() {
+
+    if ! systemctl enable --now cron >/dev/null 2>&1; then
+        error "Failed to enable/start cron service."
+        return 1
+    fi
+
+    if ! systemctl is-active --quiet cron; then
+        error "cron service is not running."
+        return 1
+    fi
+
+    return 0
+}
+
+####################################
+# Reload Cron
+####################################
+
+reload_cron() {
+
+    if systemctl reload cron >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if systemctl restart cron >/dev/null 2>&1; then
+        if systemctl is-active --quiet cron; then
+            return 0
+        fi
+    fi
+
+    error "Failed to reload/restart cron service."
+    return 1
+}
+
+####################################
 # Install Scheduler
 ####################################
 
@@ -8,14 +47,13 @@ install_scheduler() {
 
     info "Installing Scheduler..."
 
-    # Pastikan cron aktif
-    systemctl enable --now cron >/dev/null 2>&1 || true
+    ensure_cron || return 1
 
-    # Random schedule (sekali saat install)
-    HOUR=$(( RANDOM % 6 ))      # 00-05
-    MINUTE=$(( RANDOM % 60 ))   # 00-59
+    # Random schedule (once during installation)
+    HOUR=$(( RANDOM % 6 ))
+    MINUTE=$(( RANDOM % 60 ))
 
-    cat >/etc/cron.d/smartdns <<EOF
+    cat >/etc/cron.d/smartdns <<EOF2
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
@@ -23,14 +61,12 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ${MINUTE} ${HOUR} * * * root ${BASE_DIR}/data/update-blocklist.sh >>/var/log/smartdns-blocklist.log 2>&1
 
 # SmartDNS Hosts
-@reboot root /bin/bash -c 'grep -qxF "127.0.1.1 SmartDNS" /etc/hosts || echo "127.0.1.1 SmartDNS" >> /etc/hosts'
-EOF
+@reboot root /bin/bash -c 'grep -qxF "127.0.1.1 SmartDNS" /etc/hosts || echo "127.0.1.1 SmartDNS" >> /etc/hosts
+EOF2
 
     chmod 644 /etc/cron.d/smartdns
 
-    # Reload cron
-    systemctl reload cron >/dev/null 2>&1 || \
-    systemctl restart cron >/dev/null 2>&1
+    reload_cron || return 1
 
     success "Scheduler installed."
     info "Daily update scheduled at $(printf "%02d:%02d" "$HOUR" "$MINUTE")."
@@ -43,7 +79,7 @@ EOF
 
 install_heartbeat_scheduler() {
 
-    info "Installing Heartbeat Scheduler..."
+    ensure_cron || return 1
 
     install -Dm755 \
         "$BASE_DIR/scripts/smartdns-heartbeat" \
@@ -54,10 +90,8 @@ install_heartbeat_scheduler() {
         /etc/cron.d/smartdns-heartbeat
 
     chmod 644 /etc/cron.d/smartdns-heartbeat
-	
-	# Reload cron
-    systemctl reload cron >/dev/null 2>&1 || \
-    systemctl restart cron >/dev/null 2>&1
+
+    reload_cron || return 1
 
     success "Heartbeat scheduler installed."
 
@@ -68,40 +102,38 @@ install_heartbeat_scheduler() {
 #########################################
 
 automatic_update_scheduler() {
-	if [[ "$ENABLE_AUTO_UPDATE" == "yes" ]]; then
 
-		info "Installing Scheduler..."
+    if [[ "$ENABLE_AUTO_UPDATE" == "yes" ]]; then
 
-		# Pastikan cron aktif
-		systemctl enable --now cron >/dev/null 2>&1 || true
+        info "Installing Automatic Update Scheduler..."
 
-		# Random schedule (sekali saat install)
-		HOUR=$(( RANDOM % 6 ))      # 00-05
-		MINUTE=$(( RANDOM % 60 ))   # 00-59
+        ensure_cron || return 1
 
-		cat >/etc/cron.d/smartdns-update <<EOF
+        # Random schedule (once during installation)
+        HOUR=$(( RANDOM % 6 ))
+        MINUTE=$(( RANDOM % 60 ))
+
+        cat >/etc/cron.d/smartdns-update <<EOF2
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # SmartDNS patch Auto Update
 ${MINUTE} ${HOUR} * * * root ${BASE_DIR}/update.sh --patch >> /var/log/smartdns-update.log 2>&1
-EOF
+EOF2
 
+        chmod 644 /etc/cron.d/smartdns-update
 
-    chmod 644 /etc/cron.d/smartdns-update
+        reload_cron || return 1
 
-    # Reload cron
-    systemctl reload cron >/dev/null 2>&1 || \
-    systemctl restart cron >/dev/null 2>&1
+        success "Automatic Update scheduler installed."
+        info "Automatic Update at $(printf "%02d:%02d" "$HOUR" "$MINUTE")."
 
-    success "Scheduler installed."
-	info "Automatic Update at $(printf "%02d:%02d" "$HOUR" "$MINUTE")."
+    else
 
-	else
+        rm -f /etc/cron.d/smartdns-update
 
-		rm -f /etc/cron.d/smartdns-update
+        info "Automatic Update disabled."
 
-		info "Automatic Update disabled."
+    fi
 
-	fi
 }
