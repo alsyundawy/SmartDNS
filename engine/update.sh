@@ -73,6 +73,28 @@ update_features() {
     }
 
     #####################################
+    # SmartDNS Management UI
+    #####################################
+
+    local ui_installer="$BASE_DIR/ui/install-local.sh"
+
+    if [[ -f "$ui_installer" ]]; then
+
+        info "Installing/updating SmartDNS Management UI..."
+
+        if bash "$ui_installer"; then
+            success "SmartDNS Management UI updated."
+        else
+            warn "SmartDNS UI update failed; continuing core update."
+        fi
+
+    else
+
+        warn "SmartDNS UI installer not found; skipping."
+
+    fi
+
+    #####################################
     # Restart Services
     #####################################
 

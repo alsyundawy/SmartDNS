@@ -1,0 +1,15 @@
+[Unit]
+Description=SmartDNS Control Center & Management Web UI
+After=network.target dnsdist.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/smartdns-ui
+ExecStart=/usr/bin/python3 /opt/smartdns-ui/server.py
+Restart=always
+RestartSec=3
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target

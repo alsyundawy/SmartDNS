@@ -79,6 +79,26 @@ Mulai dari **v1.0.0**, SmartDNS juga memiliki sistem **Telemetry dan Heartbeat**
 - Node Inventory
 - Statistics Dashboard
 
+### SmartDNS Management Web UI
+
+SmartDNS kini dilengkapi **Web UI** untuk memantau dan mengelola layanan dari browser.
+
+Fitur yang tersedia:
+
+- **System Overview** — informasi server dan status layanan.
+- **Real-time Monitoring** — CPU, RAM, swap, disk usage, disk I/O/wait, network RX/TX, dan PPS.
+- **Domain Blocklist Search** — mencari domain pada blocklist.
+- **DNSDist Configuration** — melihat dan mengelola konfigurasi DNSDist yang didukung UI.
+- **Unbound Configuration** — melihat dan mengelola konfigurasi Unbound yang didukung UI.
+- **Blocklist Sources** — melihat sumber blocklist.
+- **Active Services** — memantau status service.
+- **Live Analytics dan Query Log** — melihat aktivitas serta query DNS.
+- **DNS Resolution Test Suite** — menjalankan pengujian resolusi DNS.
+- **Tools & Maintenance** — akses ke tools pemeliharaan dan Patch Update SmartDNS.
+- **GitHub Shortcut** — membuka repository SmartDNS.
+
+Web UI tersedia di `http://IP-SERVER:5000`. Login menggunakan username `admin` dan password yang sama dengan DNSDist Web UI pada port `8083`.
+
 ---
 
 ## 🖥️ Operating System Support
@@ -229,6 +249,7 @@ Installer secara otomatis mengatur:
 | DNS Resolver | 53 |
 | Recursive Resolver | 5300 |
 | DNSDist Web UI | 8083 |
+| SmartDNS Management Web UI | 5000 |
 
 ---
 
@@ -403,7 +424,7 @@ SmartDNS/
 
 ## 📜 Changelog
 
-See **CHANGELOG.md** for version history and release notes.
+Lihat **CHANGELOG.md** untuk riwayat versi dan catatan rilis.
 
 ---
 
@@ -411,7 +432,7 @@ See **CHANGELOG.md** for version history and release notes.
 
 MIT License
 
-Presented by **MyNOC.ID**
+Dipersembahkan oleh **MyNOC.ID**
 
 https://mynoc.id
 
@@ -419,15 +440,15 @@ https://mynoc.id
 
 ## ⚠️ Disclaimer
 
-SmartDNS is intended for:
+SmartDNS ditujukan untuk:
 
-- Educational environments
-- Laboratory environments
-- Enterprise environments
-- ISP environments
-- Self-hosted DNS infrastructure
+- Lingkungan pendidikan
+- Lingkungan laboratorium
+- Lingkungan perusahaan
+- Lingkungan ISP
+- Infrastruktur DNS yang dihosting sendiri
 
-Always validate configurations in your own environment before deploying to production.
+Selalu validasi konfigurasi di lingkungan Anda sendiri sebelum menerapkannya ke lingkungan produksi.
 
 ---
 
@@ -492,6 +513,26 @@ Starting from **v1.0.0**, SmartDNS also includes built-in **Telemetry and Heartb
 - Monitoring Dashboard
 - Node Inventory
 - Statistics Dashboard
+
+### SmartDNS Management Web UI
+
+SmartDNS now includes a **Web UI** to monitor and manage services from a browser.
+
+Available features:
+
+- **System Overview** — server information and service status.
+- **Real-time Monitoring** — CPU, RAM, swap, disk usage, disk I/O/wait, network RX/TX, and PPS.
+- **Domain Blocklist Search** — search domains in the blocklist.
+- **DNSDist Configuration** — view and manage configuration supported by the UI.
+- **Unbound Configuration** — view and manage configuration supported by the UI.
+- **Blocklist Sources** — view blocklist sources.
+- **Active Services** — monitor service status.
+- **Live Analytics and Query Log** — inspect DNS activity and queries.
+- **DNS Resolution Test Suite** — run DNS resolution tests.
+- **Tools & Maintenance** — access maintenance tools and SmartDNS Patch Update.
+- **GitHub Shortcut** — open the SmartDNS repository.
+
+The Web UI is available at `http://SERVER-IP:5000`. Log in with username `admin` and the same password used by the DNSDist Web UI on port `8083`.
 
 ---
 
@@ -643,6 +684,7 @@ The installer automatically configures:
 | DNS Resolver | 53 |
 | Recursive Resolver | 5300 |
 | DNSDist Web UI | 8083 |
+| SmartDNS Management Web UI | 5000 |
 
 ---
 

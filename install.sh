@@ -159,6 +159,29 @@ read -rp "Install required packages? [Y/n] : " INSTALL_PACKAGE
 
 INSTALL_PACKAGE=${INSTALL_PACKAGE:-Y}
 
+####################################
+# SmartDNS Management UI
+####################################
+
+install_smartdns_ui() {
+    local ui_installer="$BASE_DIR/ui/install-local.sh"
+
+    if [[ ! -f "$ui_installer" ]]; then
+        warning "SmartDNS UI installer not found; skipping UI installation."
+        return 0
+    fi
+
+    info "Installing SmartDNS Management UI..."
+
+    if bash "$ui_installer"; then
+        success "SmartDNS Management UI installed."
+    else
+        warning "SmartDNS UI installation failed. DNS services remain installed; check smartdns-ui.service."
+    fi
+
+    return 0
+}
+
 if [[ "$INSTALL_PACKAGE" =~ ^[Yy]$ ]]; then
 
 	if command -v timedatectl >/dev/null 2>&1; then
@@ -225,9 +248,13 @@ if [[ "$INSTALL_PACKAGE" =~ ^[Yy]$ ]]; then
     restart_services || exit 1
     save_state SERVICE
 
-	if health_check; then
+    if health_check; then
 
-		save_state DONE
+        echo
+        sleep 1
+        install_smartdns_ui
+
+        save_state DONE
 
 	else
 

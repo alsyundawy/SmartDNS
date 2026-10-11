@@ -26,4 +26,5 @@ Thumbs.db
 
 swapfile
 
-.well-known/
+.well-known/__pycache__/
+*.py[cod]
