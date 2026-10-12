@@ -376,7 +376,12 @@ cat /etc/cron.d/smartdns-update
 
 ## 📡 Telemetry / Telemetri
 
-SmartDNS sends secure heartbeat payloads every **5 minutes** to help keep track of node versions and system health.
+SmartDNS sends secure heartbeat payloads every **5 minutes** to help keep track of node versions and system health across multi-node fleets.
+
+- **Default Endpoint**: `https://telemetry.alsyundawy.com/api/v1/heartbeat.php`
+- **Self-Hosted Backend**: Included in [`tools/telemetry-server/`](file:///Users/alsyundawy/Downloads/GitHub/SmartDNS/tools/telemetry-server) (complete with API receiver and Fleet Monitor Dashboard).
+- **Custom Endpoint**: Set `SMARTDNS_TELEMETRY_URL="https://your-domain.com/api/v1/heartbeat.php"` in `/var/lib/smartdns/install.env`.
+- **Opt-out / Disable**: Set `SMARTDNS_TELEMETRY_URL="disable"` or `TELEMETRY_DISABLE=true` to turn off telemetry completely.
 
 **Data collected / Data yang dikumpulkan:**
 

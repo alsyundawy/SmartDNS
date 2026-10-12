@@ -24,7 +24,7 @@ readonly TELEMETRY_DIR="/var/lib/smartdns"
 readonly UUID_FILE="${TELEMETRY_DIR}/uuid"
 readonly INSTALL_FILE="${TELEMETRY_DIR}/install.json"
 
-readonly TELEMETRY_URL="https://smartdns.mynoc.id/api/v1/heartbeat.php"
+readonly TELEMETRY_URL="${SMARTDNS_TELEMETRY_URL:-https://telemetry.alsyundawy.com/api/v1/heartbeat.php}"
 
 readonly INSTALL_ENV="${TELEMETRY_DIR}/install.env"
 
@@ -184,6 +184,10 @@ EOF
 
 send_heartbeat() {
 
+	if [[ ${TELEMETRY_DISABLE:-false} == "true" ]] || [[ ${TELEMETRY_URL} == "disable" ]]; then
+		return 0
+	fi
+
 	if [[ -z ${UUID:-} ]]; then
 		echo "ERROR: Telemetry UUID is empty" >&2
 		return 1
@@ -218,6 +222,7 @@ save_install_env() {
 
 	cat >"${INSTALL_ENV}" <<EOF
 SMARTDNS_HOME="${BASE_DIR}"
+SMARTDNS_TELEMETRY_URL="${TELEMETRY_URL}"
 EOF
 
 	chmod 600 "${INSTALL_ENV}"

@@ -14,10 +14,13 @@ All notable changes to SmartDNS are documented in this file.
 - Integrated `cron` and `git` into core prerequisite package list.
 - Integrated MegaLinter GitHub Action runner (`.github/workflows/megalinter.yml`) utilizing `oxsecurity/megalinter@v8`.
 - Added repository-tailored MegaLinter configuration (`.mega-linter.yml`) with Microsoft DevSkim explicitly disabled (`DISABLE_LINTERS: [REPOSITORY_DEVSKIM]`).
+- Added self-hosted Telemetry Receiver server package (`tools/telemetry-server/`) featuring atomic JSON persistence, Cloudflare real IP detection, and interactive Fleet Monitor dashboard (`index.php`).
+- Added comprehensive Telemetry Architecture & Security guide (`docs/telemetry.md`).
 
 ### Enhanced & Hardened (13-Pillar Production Code Review)
 
 - **13-Pillar Architecture & Security Audit**: Audited Bug, Syntax, Runtime, Logic, Memory, Dead Code, Deduplication, Circular Dependencies, Performance, Security Hardening, Maintainability, Scalability, and Readability across the entire repository.
+- **Self-Hosted Telemetry & Data Sovereignty**: Migrated telemetry endpoint from third-party domain to `https://telemetry.alsyundawy.com/api/v1/heartbeat.php` with support for dynamic `SMARTDNS_TELEMETRY_URL` overrides and full opt-out via `TELEMETRY_DISABLE=true`.
 - **Trunk Universal Linter**: 100% clean across all 55 files (`actionlint`, `checkov`, `git-diff-check`, `markdownlint`, `prettier`, `shellcheck`, `shfmt`, `trufflehog`, `yamllint`).
 - **HTTP / RFC 7231 Compliance**: Enforced header-only responses for `do_HEAD` in Python server (`ui/server.py`), preventing broken pipe exceptions and body leaks.
 - **Subprocess Hardening**: Removed `shell=True` invocation in background update runners in `ui/server.py`, passing argument lists directly to eliminate shell injection attack surfaces (CWE-78 / OWASP A05).

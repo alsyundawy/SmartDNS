@@ -908,8 +908,17 @@ def execute_tool_command(body):
             if os.path.exists(INSTALL_JSON):
                 with open(INSTALL_JSON, "r", encoding="utf-8") as f:
                     meta = f.read().strip()
+            telemetry_url = "https://telemetry.alsyundawy.com/api/v1/heartbeat.php"
+            if os.path.exists(INSTALL_ENV):
+                try:
+                    with open(INSTALL_ENV, "r", encoding="utf-8") as f:
+                        for line in f:
+                            if line.startswith("SMARTDNS_TELEMETRY_URL="):
+                                telemetry_url = line.strip().split("=", 1)[1].strip('"\'')
+                except Exception:
+                    pass
 
-            full_out = "Kirim Heartbeat Telemetry ke https://smartdns.mynoc.id/api/v1/heartbeat.php\n"
+            full_out = f"Kirim Heartbeat Telemetry ke {telemetry_url}\n"
             full_out += f"Status: {'BERHASIL (Exit Code 0)' if res.returncode == 0 else 'GAGAL (Exit Code ' + str(res.returncode) + ')'}\n"
             if out:
                 full_out += f"\nDetail Eksekusi:\n{out}\n"
