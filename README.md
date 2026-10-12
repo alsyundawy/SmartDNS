@@ -2,10 +2,11 @@
 <!--
 CHANGELOG:
 - Released v1.0.3-shellcheck-optimizer with integrated SmartDNS Management Web UI on port 5000.
+- Added MegaLinter GitHub Action runner (oxsecurity/megalinter@v8) with DevSkim disabled.
 - Added real-time hardware monitoring, live DNS analytics, and blocklist search in Web UI.
 - Ported system journal usage and retention limits (200MB, 7 days) via engine/sysctl.sh.
 - Synchronized telemetry heartbeat and UUID handling across updates.
-- Maintained 100% ShellCheck compliance across all shell scripts.
+- Maintained 100% ShellCheck and Trunk compliance across all repository files.
 - Released v1.0.1-shellcheck-optimizer with full ShellCheck compliance and strict bash standards.
 - Added Automatic Update Patch engine (update.sh --patch) with self-update re-execution logic.
 - Integrated multi-source blocklist downloader with merge and fallback URL directives.
