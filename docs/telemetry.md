@@ -2,6 +2,9 @@
 
 Panduan teknis dan spesifikasi arsitektur telemetri mandiri (_self-hosted telemetry_) untuk ekosistem **SmartDNS** di bawah domain [alsyundawy.com](https://alsyundawy.com).
 
+> [!NOTE]
+> Panduan ini dan seluruh dokumentasi operasional, instalasi, Web UI, serta arsitektur SmartDNS telah dikonsolidasikan dalam satu berkas terpadu di [docs/GUIDE.md](file:///Users/alsyundawy/Downloads/GitHub/SmartDNS/docs/GUIDE.md).
+
 ---
 
 ## 🔒 Analisis Keamanan & Privasi
