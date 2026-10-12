@@ -28,8 +28,19 @@ UPDATE_SCRIPT = "/opt/blocklist/update-blocklist.sh"
 UPDATE_LOG = "/opt/blocklist/update.log"
 CONFIG_FILE = "/opt/smartdns-ui/config.json"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+STATIC_ASSET_MAP = {
+    "/": ("index.html", "text/html; charset=utf-8"),
+    "/index.html": ("index.html", "text/html; charset=utf-8"),
+    "/static/index.html": ("index.html", "text/html; charset=utf-8"),
+    "/static/app.css": ("app.css", "text/css; charset=utf-8"),
+    "/static/app.js": ("app.js", "application/javascript; charset=utf-8"),
+}
+STATIC_SAFE_FILES = {
+    "index.html": "index.html",
+    "app.css": "app.css",
+    "app.js": "app.js",
+}
 
-import os
 from pathlib import Path
 
 # Repo directory: bisa di-override oleh systemd saat GUI sudah dipasang.
@@ -778,77 +789,80 @@ def execute_tool_command(body):
         domain = body.get("domain", "google.com").strip()
         if not domain:
             domain = "google.com"
-        if not re.fullmatch(r'^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.?$', domain) or ".." in domain:
+        if not re.fullmatch(r'^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.?$', domain) or ".." in domain or len(domain) > 253:
             return {"success": False, "error": "Nama domain tidak valid (hanya alfanumerik, titik, dan strip).", "output": "Error: Invalid domain"}
 
         safe_domain = str(domain)
         target = body.get("target", "ipv4")
+        if target not in ["ipv4", "ipv6", "recursive", "all"]:
+            return {"success": False, "error": f"Target dig '{target}' tidak dikenal."}
+
         rtype = body.get("record_type", "A").upper().strip()
-        if rtype not in ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "PTR", "SOA", "ANY"]:
+        allowed_rtypes = {"A", "AAAA", "CNAME", "MX", "TXT", "NS", "PTR", "SOA", "ANY"}
+        if rtype not in allowed_rtypes:
             rtype = "A"
         safe_rtype = str(rtype)
         short = bool(body.get("short", False))
 
+        # Command line contains ONLY compile-time constants (CWE-88 / Alert #31 mitigation)
+        # Query input is passed safely via standard input stream in batch format
+        dig_cmd = ["dig", "+short", "-f", "-"] if short else ["dig", "-f", "-"]
+
         if target == "all":
             targets = [
-                ("@127.0.0.1", "Frontend IPv4 (Port 53)", ["dig"] + (["+short"] if short else []) + ["@127.0.0.1", "-q", safe_domain, "-t", safe_rtype]),
-                ("@::1", "Frontend IPv6 (Port 53)", ["dig"] + (["+short"] if short else []) + ["@::1", "-q", safe_domain, "-t", safe_rtype]),
-                ("@127.0.0.1 -p 5300", "Recursive Unbound (Port 5300)", ["dig"] + (["+short"] if short else []) + ["@127.0.0.1", "-p", "5300", "-q", safe_domain, "-t", safe_rtype])
+                ("@127.0.0.1", "Frontend IPv4 (Port 53)", f"@127.0.0.1 {safe_domain} {safe_rtype}\n"),
+                ("@::1", "Frontend IPv6 (Port 53)", f"@::1 {safe_domain} {safe_rtype}\n"),
+                ("@127.0.0.1 -p 5300", "Recursive Unbound (Port 5300)", f"@127.0.0.1 -p 5300 {safe_domain} {safe_rtype}\n")
             ]
             combined = []
             overall_success = True
-            for s_addr, s_label, cmd in targets:
+            for s_addr, s_label, batch_in in targets:
                 try:
-                    res = subprocess.run(cmd, capture_output=True, text=True, timeout=8)
+                    res = subprocess.run(dig_cmd, input=batch_in, capture_output=True, text=True, timeout=8)
                     out = (res.stdout + ("\n" + res.stderr if res.stderr else "")).strip()
                     status_str = "OK (Code 0)" if res.returncode == 0 else f"GAGAL (Code {res.returncode})"
-                    combined.append(f"=== [{s_label}] {' '.join(cmd)} [{status_str}] ===\n{out}\n")
+                    cmd_label = f"dig {s_addr} {safe_domain} {safe_rtype}" + (" +short" if short else "")
+                    combined.append(f"=== [{s_label}] {cmd_label} [{status_str}] ===\n{out}\n")
                     if res.returncode != 0:
                         overall_success = False
                 except Exception as ex:
-                    combined.append(f"=== [{s_label}] {' '.join(cmd)} [ERROR] ===\n{ex}\n")
+                    cmd_label = f"dig {s_addr} {safe_domain} {safe_rtype}" + (" +short" if short else "")
+                    combined.append(f"=== [{s_label}] {cmd_label} [ERROR] ===\n{ex}\n")
                     overall_success = False
             return {
                 "success": overall_success,
-                "command": f"dig @127.0.0.1 & dig @::1 & dig @127.0.0.1 -p 5300 {safe_domain} {safe_rtype}",
+                "command": f"dig @127.0.0.1 & dig @::1 & dig @127.0.0.1 -p 5300 {safe_domain} {safe_rtype}" + (" +short" if short else ""),
                 "description": f"Uji Semua Resolusi DNS untuk '{safe_domain}' ({safe_rtype})",
                 "output": "\n".join(combined),
                 "exit_code": 0 if overall_success else 1
             }
 
-        cmd = ["dig"]
-        if short:
-            cmd.append("+short")
-
-        if target == "ipv4":
-            cmd.extend(["@127.0.0.1", "-q", safe_domain, "-t", safe_rtype])
-            desc = f"dig @127.0.0.1 {safe_domain} {safe_rtype}"
-        elif target == "ipv6":
-            cmd.extend(["@::1", "-q", safe_domain, "-t", safe_rtype])
-            desc = f"dig @::1 {safe_domain} {safe_rtype}"
+        server_target = "@127.0.0.1"
+        if target == "ipv6":
+            server_target = "@::1"
         elif target == "recursive":
-            cmd.extend(["@127.0.0.1", "-p", "5300", "-q", safe_domain, "-t", safe_rtype])
-            desc = f"dig @127.0.0.1 -p 5300 {safe_domain} {safe_rtype}"
-        else:
-            return {"success": False, "error": f"Target dig '{target}' tidak dikenal."}
+            server_target = "@127.0.0.1 -p 5300"
+
+        desc = f"dig {server_target} {safe_domain} {safe_rtype}" + (" +short" if short else "")
+        batch_in = f"{server_target} {safe_domain} {safe_rtype}\n"
 
         try:
             t0 = time.time()
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=12)
+            res = subprocess.run(dig_cmd, input=batch_in, capture_output=True, text=True, timeout=12)
             elapsed_ms = round((time.time() - t0) * 1000, 2)
             raw_out = (res.stdout + ("\n" + res.stderr if res.stderr else "")).strip()
             return {
                 "success": (res.returncode == 0),
-                "command": " ".join(cmd),
+                "command": desc,
                 "description": desc,
                 "output": raw_out if raw_out else "[Tidak ada output dari server]",
                 "exit_code": res.returncode,
                 "elapsed_ms": elapsed_ms
             }
         except subprocess.TimeoutExpired:
-            return {"success": False, "command": " ".join(cmd), "error": "Perintah dig timeout (lebih dari 12 detik).", "output": "Timeout: No response from DNS server"}
+            return {"success": False, "command": desc, "error": "Perintah dig timeout (lebih dari 12 detik).", "output": "Timeout: No response from DNS server"}
         except Exception as e:
-            return {"success": False, "command": " ".join(cmd), "error": str(e), "output": str(e)}
+            return {"success": False, "command": desc, "error": str(e), "output": str(e)}
 
     elif action == "checkconf":
         component = body.get("component", "unbound")
@@ -1720,25 +1734,16 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
         path = parsed.path
         query = parse_qs(parsed.query)
 
-        # Static assets
-        if path == "/" or path == "/index.html":
-            return self._serve_file(os.path.join(STATIC_DIR, "index.html"), "text/html; charset=utf-8")
+        # Static assets (routed strictly through compile-time map to eliminate path injection)
+        if path in STATIC_ASSET_MAP:
+            filename, mime = STATIC_ASSET_MAP[path]
+            return self._serve_file(filename, mime)
         elif path.startswith("/static/"):
-            filename = os.path.basename(path)
-            if not re.fullmatch(r'^[a-zA-Z0-9_.-]+$', filename) or ".." in filename:
-                self.send_error(400, "Invalid filename")
-                return
-            file_path = os.path.join(STATIC_DIR, filename)
-            mime = "text/plain"
-            if filename.endswith(".css"):
-                mime = "text/css; charset=utf-8"
-            elif filename.endswith(".js"):
-                mime = "application/javascript; charset=utf-8"
-            elif filename.endswith(".svg"):
-                mime = "image/svg+xml"
-            elif filename.endswith(".png"):
-                mime = "image/png"
-            return self._serve_file(file_path, mime)
+            return self.send_error(404, "File not found")
+        elif path == "/favicon.ico":
+            self.send_response(204)
+            self.end_headers()
+            return
 
         # Public API
         if path == "/api/auth/status":
@@ -2314,8 +2319,12 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
         else:
             return self._send_json({"error": "Not Found"}, 404)
 
-    def _serve_file(self, file_path, content_type):
-        safe_path = os.path.realpath(file_path)
+    def _serve_file(self, filename, content_type):
+        actual_name = STATIC_SAFE_FILES.get(filename)
+        if not actual_name:
+            self.send_error(404, "File not found")
+            return
+        safe_path = os.path.realpath(os.path.join(STATIC_DIR, actual_name))
         safe_static_dir = os.path.realpath(STATIC_DIR)
         if not (safe_path == safe_static_dir or safe_path.startswith(safe_static_dir + os.sep)):
             self.send_error(403, "Forbidden")
