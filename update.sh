@@ -102,43 +102,43 @@ EOF
 }
 
 case "${1:-}" in
-	--patch)
-		banner
+--patch)
+	banner
 
-		info "Checking root..."
-		if [[ "${EUID}" -ne 0 ]]; then
-			error "This command must be run as root."
-			exit 1
-		fi
-
-		check_git || exit 1
-
-		info "Update Repositories..."
-
-		SCRIPT_PATH="${BASE_DIR}/update.sh"
-
-		OLD_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "initial")
-
-		git pull || exit 1
-
-		NEW_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "initial")
-
-		if [[ "${OLD_COMMIT}" != "${NEW_COMMIT}" ]]; then
-			info "Repository updated. Restarting updater..."
-			exec "${SCRIPT_PATH}" --patch
-		fi
-
-		update_features || exit 1
-
-		save_state SERVICE
-
-		success "SmartDNS update completed."
-		;;
-	--help)
-		usage
-		;;
-	*)
-		usage
+	info "Checking root..."
+	if [[ ${EUID} -ne 0 ]]; then
+		error "This command must be run as root."
 		exit 1
-		;;
+	fi
+
+	check_git || exit 1
+
+	info "Update Repositories..."
+
+	SCRIPT_PATH="${BASE_DIR}/update.sh"
+
+	OLD_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "initial")
+
+	git pull || exit 1
+
+	NEW_COMMIT=$(git rev-parse HEAD 2>/dev/null || echo "initial")
+
+	if [[ ${OLD_COMMIT} != "${NEW_COMMIT}" ]]; then
+		info "Repository updated. Restarting updater..."
+		exec "${SCRIPT_PATH}" --patch
+	fi
+
+	update_features || exit 1
+
+	save_state SERVICE
+
+	success "SmartDNS update completed."
+	;;
+--help)
+	usage
+	;;
+*)
+	usage
+	exit 1
+	;;
 esac

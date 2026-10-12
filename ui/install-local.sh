@@ -15,7 +15,7 @@
 set -e
 
 # Pastikan dijalankan sebagai root
-if [[ "${EUID}" -ne 0 ]]; then
+if [[ ${EUID} -ne 0 ]]; then
 	echo -e "\033[1;31m[ERROR] Skrip ini harus dijalankan sebagai root (gunakan sudo atau root shell).\033[0m"
 	exit 1
 fi
@@ -34,9 +34,10 @@ MISSING_PKGS=()
 for pkg in python3 dig ss; do
 	if ! command -v "${pkg}" >/dev/null 2>&1; then
 		case "${pkg}" in
-			python3) MISSING_PKGS+=("python3") ;;
-			dig) MISSING_PKGS+=("bind9-dnsutils") ;;
-			ss) MISSING_PKGS+=("iproute2") ;;
+		python3) MISSING_PKGS+=("python3") ;;
+		dig) MISSING_PKGS+=("bind9-dnsutils") ;;
+		ss) MISSING_PKGS+=("iproute2") ;;
+		*) : ;;
 		esac
 	fi
 done
@@ -54,7 +55,7 @@ mkdir -p "${TARGET_DIR}/static"
 mkdir -p /etc/unbound/unbound.conf.d
 
 # 3. Salin file aplikasi ke /opt/smartdns-ui jika dijalankan dari direktori lain
-if [[ "${SCRIPT_DIR}" != "${TARGET_DIR}" ]]; then
+if [[ ${SCRIPT_DIR} != "${TARGET_DIR}" ]]; then
 	echo -e "\033[1;33m>>> [3/7] Menyalin file aplikasi ke ${TARGET_DIR}...\033[0m"
 	if [[ -f "${SCRIPT_DIR}/server.py" ]]; then
 		cp -f "${SCRIPT_DIR}/server.py" "${TARGET_DIR}/"
@@ -104,11 +105,16 @@ chmod +x "${TARGET_DIR}/server.py" 2>/dev/null || true
 chmod 644 /etc/systemd/system/smartdns-ui.service
 
 # 6. Buka Firewall UFW jika aktif
-if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
-	echo -e "\033[1;33m>>> [6/7] Terdeteksi firewall UFW aktif, mengizinkan port 5000/tcp...\033[0m"
-	ufw allow 5000/tcp comment "SmartDNS Web UI" >/dev/null 2>&1 || true
+if command -v ufw >/dev/null 2>&1; then
+	UFW_STATUS=$(ufw status 2>/dev/null || true)
+	if echo "${UFW_STATUS}" | grep -q "Status: active"; then
+		echo -e "\033[1;33m>>> [6/7] Terdeteksi firewall UFW aktif, mengizinkan port 5000/tcp...\033[0m"
+		ufw allow 5000/tcp comment "SmartDNS Web UI" >/dev/null 2>&1 || true
+	else
+		echo -e "\033[1;32m✓ [6/7] Firewall UFW tidak aktif atau port sudah terbuka.\033[0m"
+	fi
 else
-	echo -e "\033[1;32m✓ [6/7] Firewall UFW tidak aktif atau port sudah terbuka.\033[0m"
+	echo -e "\033[1;32m✓ [6/7] Firewall UFW tidak terpasang.\033[0m"
 fi
 
 # 7. Reload & restart service
@@ -125,8 +131,9 @@ else
 	STATUS_TXT="\033[1;31mFAILED TO START\033[0m"
 fi
 
-SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-if [[ -z "${SERVER_IP}" ]]; then
+RAW_IPS=$(hostname -I 2>/dev/null || true)
+SERVER_IP=$(awk '{print $1}' <<<"${RAW_IPS}")
+if [[ -z ${SERVER_IP} ]]; then
 	SERVER_IP="<IP-SERVER-ANDA>"
 fi
 

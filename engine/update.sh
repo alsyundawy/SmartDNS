@@ -106,7 +106,7 @@ update_features() {
 
 	local ui_installer="${BASE_DIR}/ui/install-local.sh"
 
-	if [[ -f "${ui_installer}" ]]; then
+	if [[ -f ${ui_installer} ]]; then
 
 		info "Installing/updating SmartDNS Management UI..."
 

@@ -991,11 +991,11 @@ def trigger_system_update(update_type):
             log_f.write("===========================================================\n\n")
             log_f.flush()
 
-            cmd_bash = ""
+            cmd_args = ["bash", "update.sh", "--patch"]
             if update_type == "patch":
                 log_f.write(f">>> Menjalankan: cd {SMARTDNS_DIR} && bash update.sh --patch\n\n")
                 log_f.flush()
-                cmd_bash = f"cd {SMARTDNS_DIR} && bash update.sh --patch"
+                cmd_args = ["bash", os.path.join(SMARTDNS_DIR, "update.sh"), "--patch"]
             elif update_type == "force":
                 try:
                     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1006,7 +1006,7 @@ def trigger_system_update(update_type):
                     log_f.write(f">>> [WARN] Gagal backup dnsdist.conf: {b_err}\n")
                 log_f.write(f">>> Menjalankan: cd {SMARTDNS_DIR} && git fetch origin && git reset --hard origin/main && yes \"\" | bash install.sh\n\n")
                 log_f.flush()
-                cmd_bash = f"cd {SMARTDNS_DIR} && git fetch origin && git reset --hard origin/main && yes \"\" | bash install.sh"
+                cmd_args = ["bash", "-c", f"cd '{SMARTDNS_DIR}' && git fetch origin && git reset --hard origin/main && yes '' | bash install.sh"]
             elif update_type == "standard":
                 try:
                     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1016,12 +1016,12 @@ def trigger_system_update(update_type):
                     pass
                 log_f.write(f">>> Menjalankan: cd {SMARTDNS_DIR} && git pull && yes \"\" | bash install.sh\n\n")
                 log_f.flush()
-                cmd_bash = f"cd {SMARTDNS_DIR} && git pull && yes \"\" | bash install.sh"
+                cmd_args = ["bash", "-c", f"cd '{SMARTDNS_DIR}' && git pull && yes '' | bash install.sh"]
 
             try:
                 proc = subprocess.Popen(
-                    cmd_bash,
-                    shell=True,
+                    cmd_args,
+                    shell=False,
                     stdout=log_f,
                     stderr=subprocess.STDOUT,
                     cwd=SMARTDNS_DIR
@@ -1517,7 +1517,8 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store, no-cache, must-revalidate")
         self.end_headers()
-        self.wfile.write(body)
+        if self.command != "HEAD":
+            self.wfile.write(body)
 
     def _get_cookie(self, name):
         cookie_header = self.headers.get("Cookie", "")
@@ -2141,7 +2142,8 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             self.send_header("Pragma", "no-cache")
             self.send_header("Expires", "0")
             self.end_headers()
-            self.wfile.write(content)
+            if self.command != "HEAD":
+                self.wfile.write(content)
         except Exception as e:
             self.send_error(500, f"Error reading file: {e}")
 

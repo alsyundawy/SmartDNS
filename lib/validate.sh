@@ -240,7 +240,7 @@ to_lua_array() {
 	local out="{"
 	local first=1
 
-	IFS=',' read -ra IPS <<< "${list}"
+	IFS=',' read -ra IPS <<<"${list}"
 
 	for ip in "${IPS[@]}"; do
 

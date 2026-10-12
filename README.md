@@ -366,10 +366,10 @@ cat /etc/cron.d/smartdns-update
 
 ## 🖥️ Web Interfaces & Dashboards / Antarmuka Web & Dasbor
 
-| Dashboard / Konsol | Port | URL | Keterangan / Credentials |
-| ------------------ | :--: | --- | ------------------------ |
+| Dashboard / Konsol         |  Port  | URL                       | Keterangan / Credentials                                                             |
+| -------------------------- | :----: | ------------------------- | ------------------------------------------------------------------------------------ |
 | **SmartDNS Management UI** | `5000` | `http://<SERVER-IP>:5000` | Real-time monitoring, query analytics, blocklist lookup (`admin` / DNSDist password) |
-| **dnsdist Web Console** | `8083` | `http://<SERVER-IP>:8083` | DNS routing stats, live query graphs (`admin` / `DNSDIST_WEB_PASSWORD`) |
+| **dnsdist Web Console**    | `8083` | `http://<SERVER-IP>:8083` | DNS routing stats, live query graphs (`admin` / `DNSDIST_WEB_PASSWORD`)              |
 
 ---
 

@@ -57,4 +57,3 @@ EOF
 	success "System journal optimized."
 
 }
-

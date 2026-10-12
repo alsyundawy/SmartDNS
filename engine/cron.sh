@@ -127,7 +127,7 @@ install_heartbeat_scheduler() {
 
 automatic_update_scheduler() {
 
-	if [[ "${ENABLE_AUTO_UPDATE:-yes}" == "yes" ]]; then
+	if [[ ${ENABLE_AUTO_UPDATE:-yes} == "yes" ]]; then
 
 		info "Installing Automatic Update Scheduler..."
 

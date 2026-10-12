@@ -166,7 +166,7 @@ run_wizard() {
 
 				OK=yes
 
-				IFS=',' read -ra IPS <<< "${TMP}"
+				IFS=',' read -ra IPS <<<"${TMP}"
 
 				for IP in "${IPS[@]}"; do
 
@@ -201,7 +201,7 @@ run_wizard() {
 
 					OK=yes
 
-					IFS=',' read -ra IPS <<< "${TMP}"
+					IFS=',' read -ra IPS <<<"${TMP}"
 
 					for IP in "${IPS[@]}"; do
 

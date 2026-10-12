@@ -12,7 +12,7 @@
 #   removed unused color variables, improved shebang declarations, and performed
 #   general code quality and maintainability improvements.
 #
-
+# shellcheck disable=SC2310
 set -euo pipefail
 
 #########################################
@@ -102,9 +102,9 @@ download_source() {
 		"${URL}" \
 		-o "${DOWNLOAD}"; then
 
-		if [[ -s "${DOWNLOAD}" ]] && ! grep -qi "<html" "${DOWNLOAD}"; then
-			cat "${DOWNLOAD}" >> "${RAW}"
-			echo >> "${RAW}"
+		if [[ -s ${DOWNLOAD} ]] && ! grep -qi "<html" "${DOWNLOAD}"; then
+			cat "${DOWNLOAD}" >>"${RAW}"
+			echo >>"${RAW}"
 			echo "Success: ${URL}" | tee -a "${LOG}"
 			rm -f "${DOWNLOAD}"
 			return 0
@@ -126,44 +126,45 @@ download_source() {
 SUCCESS=1
 FALLBACK_URL=""
 
-: > "${RAW}"
+: >"${RAW}"
 
-while read -r TYPE URL || [[ -n "${TYPE:-}" ]]; do
-	[[ -z "${TYPE:-}" || "${TYPE}" =~ ^# ]] && continue
+while read -r TYPE URL || [[ -n ${TYPE:-} ]]; do
+	[[ -z ${TYPE:-} || ${TYPE} =~ ^# ]] && continue
 
 	# Handle backward compatibility if single line URL provided without TYPE
-	if [[ "${TYPE}" =~ ^https?:// ]]; then
+	if [[ ${TYPE} =~ ^https?:// ]]; then
 		URL="${TYPE}"
 		TYPE="merge"
 	fi
 
 	case "${TYPE}" in
-		merge)
-			echo "Trying ${URL}" | tee -a "${LOG}"
-			if ! download_source "${URL}"; then
-				SUCCESS=0
-			fi
-			;;
-		fallback)
-			FALLBACK_URL="${URL}"
-			;;
+	merge)
+		echo "Trying ${URL}" | tee -a "${LOG}"
+		download_source "${URL}" || SUCCESS=0
+		;;
+	fallback)
+		FALLBACK_URL="${URL}"
+		;;
+	*)
+		:
+		;;
 	esac
-done < "${SOURCE}"
+done <"${SOURCE}"
 
 #########################################
 # Fallback Handler
 #########################################
 
-if [[ "${SUCCESS}" -eq 0 ]]; then
+if [[ ${SUCCESS} -eq 0 ]]; then
 	echo "Merge source failed, using fallback..." | tee -a "${LOG}"
 
-	: > "${RAW}"
+	: >"${RAW}"
 
-	if [[ -n "${FALLBACK_URL}" ]]; then
-		if ! download_source "${FALLBACK_URL}"; then
+	if [[ -n ${FALLBACK_URL} ]]; then
+		download_source "${FALLBACK_URL}" || {
 			echo "Fallback download failed." | tee -a "${LOG}"
 			exit 1
-		fi
+		}
 	else
 		echo "No fallback URL defined and merge failed." | tee -a "${LOG}"
 		exit 1
@@ -174,7 +175,7 @@ fi
 # Validation
 #########################################
 
-if [[ ! -s "${RAW}" ]]; then
+if [[ ! -s ${RAW} ]]; then
 	echo "Download failed." | tee -a "${LOG}"
 	exit 1
 fi
@@ -194,9 +195,9 @@ grep -Eo '([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})' "${RAW}" |
 	sed 's/^\.//' |
 	tr '[:upper:]' '[:lower:]' |
 	sort -u \
-		> "${NEW}"
+		>"${NEW}"
 
-COUNT=$(wc -l < "${NEW}")
+COUNT=$(wc -l <"${NEW}")
 
 echo "Domains : ${COUNT}" | tee -a "${LOG}"
 
@@ -211,7 +212,7 @@ fi
 
 mv "${NEW}" "${TMP}"
 
-TOTAL=$(wc -l < "${TMP}")
+TOTAL=$(wc -l <"${TMP}")
 
 echo "Replacing blocklist (${TOTAL} domains)" | tee -a "${LOG}"
 
@@ -228,11 +229,11 @@ awk '{
 }
 END{
     print ""
-}' "${FINAL}" > "${CDB_INPUT}"
+}' "${FINAL}" >"${CDB_INPUT}"
 
-cdbmake "${CDB_TMP}" "${WORKDIR}/cdbmake.tmp" < "${CDB_INPUT}"
+cdbmake "${CDB_TMP}" "${WORKDIR}/cdbmake.tmp" <"${CDB_INPUT}"
 
-if [[ ! -s "${CDB_TMP}" ]]; then
+if [[ ! -s ${CDB_TMP} ]]; then
 	echo "CDB build failed." | tee -a "${LOG}"
 	exit 1
 fi
