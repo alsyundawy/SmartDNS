@@ -13,6 +13,7 @@ import time
 import shutil
 import hashlib
 import secrets
+import tempfile
 import subprocess
 from datetime import datetime
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -67,8 +68,10 @@ def load_sessions():
 def save_sessions(sessions_set):
     try:
         os.makedirs(os.path.dirname(SESSION_FILE), exist_ok=True)
-        with open(SESSION_FILE, "w", encoding="utf-8") as f:
+        fd = os.open(SESSION_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(list(sessions_set), f)
+        os.chmod(SESSION_FILE, 0o600)
     except Exception:
         pass
 
@@ -79,11 +82,14 @@ def get_dnsdist_web_password():
     try:
         with open(DNSDIST_CONF, "r", encoding="utf-8") as f:
             content = f.read()
-        match = re.search(
-            r'setWebserverConfig\s*\(\s*\{[\s\S]*?\bpassword\s*=\s*"([^"]*)"',
-            content
-        )
-        return match.group(1) if match else None
+        idx_ws = content.find("setWebserverConfig(")
+        if idx_ws != -1:
+            b_end = content.find(")", idx_ws)
+            if b_end != -1:
+                ws_block = content[idx_ws:b_end]
+                match = re.search(r'\bpassword\s*=\s*"([^"]*)"', ws_block)
+                return match.group(1) if match else None
+        return None
     except (OSError, UnicodeError) as e:
         print(f"[WARN] Unable to read DNSDist Web UI password: {e}")
         return None
@@ -107,8 +113,10 @@ def load_app_config():
     else:
         try:
             os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
-            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            fd = os.open(CONFIG_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 json.dump(default_config, f, indent=2)
+            os.chmod(CONFIG_FILE, 0o600)
         except Exception as e:
             print(f"[WARN] Failed to save default config.json: {e}")
 
@@ -291,10 +299,16 @@ def check_service_status(service_name):
         return False
 
 def test_dnsdist_syntax(config_content):
-    tmp_path = f"/tmp/dnsdist_test_{int(time.time()*1000)}.conf"
+    fd, tmp_path = tempfile.mkstemp(prefix="dnsdist_test_", suffix=".conf")
     try:
-        with open(tmp_path, "w", encoding="utf-8") as f:
-            f.write(config_content)
+        # Mask credentials before writing to temporary validation file to prevent cleartext leakage
+        safe_content = re.sub(
+            r'(\b(?:password|apiKey|setKey)\s*=\s*)"[^"]*"',
+            r'\1"__SYNTAX_CHECK__"',
+            config_content
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(safe_content)
         res = subprocess.run(
             ["dnsdist", "--check-config", f"--config={tmp_path}"],
             capture_output=True, text=True
@@ -312,9 +326,9 @@ def test_dnsdist_syntax(config_content):
                 pass
 
 def test_unbound_syntax(config_content):
-    tmp_path = f"/tmp/unbound_test_{int(time.time()*1000)}.conf"
+    fd, tmp_path = tempfile.mkstemp(prefix="unbound_test_", suffix=".conf")
     try:
-        with open(tmp_path, "w", encoding="utf-8") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(config_content)
         res = subprocess.run(
             ["unbound-checkconf", tmp_path],
@@ -340,19 +354,32 @@ def sync_acl_to_unbound(final_acls):
             content = f.read()
 
         acl_lines = "\n".join([f"    access-control: {a} allow" for a in final_acls])
-        pattern_acl = r'(#+\s*\n\s*#\s*ACL\s*\n\s*#+[\s\S]*?)(?=\n\s*#+\s*\n\s*#\s*Root)'
-        if re.search(pattern_acl, content):
-            new_content = re.sub(
-                pattern_acl,
-                rf'####################################\n    # ACL\n    ####################################\n\n{acl_lines}\n\n',
-                content,
-                count=1
-            )
+        idx_acl = content.find("# ACL")
+        if idx_acl != -1:
+            b_start = content.rfind("###", 0, idx_acl)
+            if b_start == -1:
+                b_start = idx_acl
+            idx_root = content.find("# Root", idx_acl)
+            if idx_root != -1:
+                b_end = content.rfind("###", idx_acl, idx_root)
+                if b_end == -1:
+                    b_end = idx_root
+            else:
+                b_end = len(content)
+            new_acl_block = f"####################################\n    # ACL\n    ####################################\n\n{acl_lines}\n\n"
+            new_content = content[:b_start] + new_acl_block + content[b_end:]
+
             is_ok, msg = test_unbound_syntax(new_content)
             if is_ok:
                 ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-                shutil.copy2(UNBOUND_CONF, f"{UNBOUND_CONF}.bak_sync_{ts}")
-                with open(UNBOUND_CONF, "w", encoding="utf-8") as f:
+                backup_path = f"{UNBOUND_CONF}.bak_sync_{ts}"
+                shutil.copy2(UNBOUND_CONF, backup_path)
+                try:
+                    os.chmod(backup_path, 0o600)
+                except Exception:
+                    pass
+                fd = os.open(UNBOUND_CONF, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(new_content)
                 subprocess.run(["systemctl", "restart", "unbound"], capture_output=True, text=True)
                 return True, "ACL Unbound tersinkronisasi"
@@ -375,14 +402,31 @@ def sync_acl_to_dnsdist(final_acls):
         if re.search(pattern_acl, content):
             new_content = re.sub(pattern_acl, acl_replacement, content, count=1)
             acl_comma_str = ','.join(final_acls)
-            new_content = re.sub(r'(setWebserverConfig\s*\(\s*\{[\s\S]*?acl\s*=\s*)"[^"]*"', rf'\g<1>"{acl_comma_str}"', new_content, count=1)
+            idx_ws = new_content.find("setWebserverConfig(")
+            if idx_ws != -1:
+                b_end = new_content.find(")", idx_ws)
+                if b_end != -1:
+                    ws_block = new_content[idx_ws:b_end]
+                    ws_block = re.sub(r'(acl\s*=\s*)"[^"]*"', rf'\g<1>"{acl_comma_str}"', ws_block, count=1)
+                    new_content = new_content[:idx_ws] + ws_block + new_content[b_end:]
 
             is_ok, msg = test_dnsdist_syntax(new_content)
             if is_ok:
                 ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-                shutil.copy2(DNSDIST_CONF, f"{DNSDIST_CONF}.bak_sync_{ts}")
-                with open(DNSDIST_CONF, "w", encoding="utf-8") as f:
+                backup_path = f"{DNSDIST_CONF}.bak_sync_{ts}"
+                shutil.copy2(DNSDIST_CONF, backup_path)
+                try:
+                    os.chmod(backup_path, 0o600)
+                except Exception:
+                    pass
+                fd = os.open(DNSDIST_CONF, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640)
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(new_content)
+                try:
+                    shutil.chown(DNSDIST_CONF, user="root", group="_dnsdist")
+                except Exception:
+                    pass
+                os.chmod(DNSDIST_CONF, 0o640)
                 subprocess.run(["systemctl", "restart", "dnsdist"], capture_output=True, text=True)
                 return True, "ACL DNSDist tersinkronisasi"
             else:
@@ -491,14 +535,20 @@ def update_unbound_structured(content, new_data):
             if a not in final_acls:
                 final_acls.append(a)
         acl_lines = "\n".join([f"    access-control: {a} allow" for a in final_acls])
-        pattern_acl = r'(#+\s*\n\s*#\s*ACL\s*\n\s*#+[\s\S]*?)(?=\n\s*#+\s*\n\s*#\s*Root)'
-        if re.search(pattern_acl, content):
-            content = re.sub(
-                pattern_acl,
-                rf'####################################\n    # ACL\n    ####################################\n\n{acl_lines}\n\n',
-                content,
-                count=1
-            )
+        idx_acl = content.find("# ACL")
+        if idx_acl != -1:
+            b_start = content.rfind("###", 0, idx_acl)
+            if b_start == -1:
+                b_start = idx_acl
+            idx_root = content.find("# Root", idx_acl)
+            if idx_root != -1:
+                b_end = content.rfind("###", idx_acl, idx_root)
+                if b_end == -1:
+                    b_end = idx_root
+            else:
+                b_end = len(content)
+            new_acl_block = f"####################################\n    # ACL\n    ####################################\n\n{acl_lines}\n\n"
+            content = content[:b_start] + new_acl_block + content[b_end:]
         else:
             raise ValueError("Tidak dapat menemukan blok ACL di smartdns.conf")
 
@@ -513,14 +563,20 @@ def update_unbound_structured(content, new_data):
         if not insecure_lines:
             insecure_lines = "    # (Tidak ada domain insecure yang didaftarkan)"
 
-        pattern_ins = r'(#+\s*\n\s*#\s*Domain Insecure\s*\n\s*#+[\s\S]*?)(?=\n\s*#+\s*\n\s*#\s*Logging|$)'
-        if re.search(pattern_ins, content):
-            content = re.sub(
-                pattern_ins,
-                rf'####################################\n    # Domain Insecure\n    ####################################\n\n{insecure_lines}\n\n',
-                content,
-                count=1
-            )
+        idx_ins = content.find("# Domain Insecure")
+        if idx_ins != -1:
+            b_start = content.rfind("###", 0, idx_ins)
+            if b_start == -1:
+                b_start = idx_ins
+            idx_log = content.find("# Logging", idx_ins)
+            if idx_log != -1:
+                b_end = content.rfind("###", idx_ins, idx_log)
+                if b_end == -1:
+                    b_end = idx_log
+            else:
+                b_end = len(content)
+            new_ins_block = f"####################################\n    # Domain Insecure\n    ####################################\n\n{insecure_lines}\n\n"
+            content = content[:b_start] + new_ins_block + content[b_end:]
         else:
             raise ValueError("Tidak dapat menemukan blok Domain Insecure di smartdns.conf")
 
@@ -583,14 +639,13 @@ def update_unbound_structured(content, new_data):
         l_r = "yes" if new_data.get("log_replies", False) else "no"
         log_block = f"    verbosity: {v_int}\n    log-queries: {l_q}\n    log-replies: {l_r}\n"
 
-        pattern_log = r'(#+\s*\n\s*#\s*Logging\s*\n\s*#+[\s\S]*?$)'
-        if re.search(pattern_log, content):
-            content = re.sub(
-                pattern_log,
-                rf'####################################\n    # Logging\n    ####################################\n\n{log_block}',
-                content,
-                count=1
-            )
+        idx_log = content.find("# Logging")
+        if idx_log != -1:
+            b_start = content.rfind("###", 0, idx_log)
+            if b_start == -1:
+                b_start = idx_log
+            new_log_sec = f"####################################\n    # Logging\n    ####################################\n\n{log_block}"
+            content = content[:b_start] + new_log_sec
 
     return content
 
@@ -723,20 +778,22 @@ def execute_tool_command(body):
         domain = body.get("domain", "google.com").strip()
         if not domain:
             domain = "google.com"
-        if not re.match(r'^[a-zA-Z0-9.-]{1,253}$', domain) or ".." in domain or domain.startswith("-"):
+        if not re.fullmatch(r'^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.?$', domain) or ".." in domain:
             return {"success": False, "error": "Nama domain tidak valid (hanya alfanumerik, titik, dan strip).", "output": "Error: Invalid domain"}
 
+        safe_domain = str(domain)
         target = body.get("target", "ipv4")
-        rtype = body.get("record_type", "A").upper()
+        rtype = body.get("record_type", "A").upper().strip()
         if rtype not in ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "PTR", "SOA", "ANY"]:
             rtype = "A"
+        safe_rtype = str(rtype)
         short = bool(body.get("short", False))
 
         if target == "all":
             targets = [
-                ("@127.0.0.1", "Frontend IPv4 (Port 53)", ["dig"] + (["+short"] if short else []) + ["@127.0.0.1", domain, rtype]),
-                ("@::1", "Frontend IPv6 (Port 53)", ["dig"] + (["+short"] if short else []) + ["@::1", domain, rtype]),
-                ("@127.0.0.1 -p 5300", "Recursive Unbound (Port 5300)", ["dig"] + (["+short"] if short else []) + ["@127.0.0.1", "-p", "5300", domain, rtype])
+                ("@127.0.0.1", "Frontend IPv4 (Port 53)", ["dig"] + (["+short"] if short else []) + ["@127.0.0.1", "-q", safe_domain, "-t", safe_rtype]),
+                ("@::1", "Frontend IPv6 (Port 53)", ["dig"] + (["+short"] if short else []) + ["@::1", "-q", safe_domain, "-t", safe_rtype]),
+                ("@127.0.0.1 -p 5300", "Recursive Unbound (Port 5300)", ["dig"] + (["+short"] if short else []) + ["@127.0.0.1", "-p", "5300", "-q", safe_domain, "-t", safe_rtype])
             ]
             combined = []
             overall_success = True
@@ -753,8 +810,8 @@ def execute_tool_command(body):
                     overall_success = False
             return {
                 "success": overall_success,
-                "command": f"dig @127.0.0.1 & dig @::1 & dig @127.0.0.1 -p 5300 {domain} {rtype}",
-                "description": f"Uji Semua Resolusi DNS untuk '{domain}' ({rtype})",
+                "command": f"dig @127.0.0.1 & dig @::1 & dig @127.0.0.1 -p 5300 {safe_domain} {safe_rtype}",
+                "description": f"Uji Semua Resolusi DNS untuk '{safe_domain}' ({safe_rtype})",
                 "output": "\n".join(combined),
                 "exit_code": 0 if overall_success else 1
             }
@@ -764,14 +821,14 @@ def execute_tool_command(body):
             cmd.append("+short")
 
         if target == "ipv4":
-            cmd.extend(["@127.0.0.1", domain, rtype])
-            desc = f"dig @127.0.0.1 {domain} {rtype}"
+            cmd.extend(["@127.0.0.1", "-q", safe_domain, "-t", safe_rtype])
+            desc = f"dig @127.0.0.1 {safe_domain} {safe_rtype}"
         elif target == "ipv6":
-            cmd.extend(["@::1", domain, rtype])
-            desc = f"dig @::1 {domain} {rtype}"
+            cmd.extend(["@::1", "-q", safe_domain, "-t", safe_rtype])
+            desc = f"dig @::1 {safe_domain} {safe_rtype}"
         elif target == "recursive":
-            cmd.extend(["@127.0.0.1", "-p", "5300", domain, rtype])
-            desc = f"dig @127.0.0.1 -p 5300 {domain} {rtype}"
+            cmd.extend(["@127.0.0.1", "-p", "5300", "-q", safe_domain, "-t", safe_rtype])
+            desc = f"dig @127.0.0.1 -p 5300 {safe_domain} {safe_rtype}"
         else:
             return {"success": False, "error": f"Target dig '{target}' tidak dikenal."}
 
@@ -1069,41 +1126,59 @@ def parse_dnsdist_structured(content):
     }
 
     # 1. Parse Block AAAA (IPv6 Spoof)
-    m_v6 = re.search(
-        r'-- Block AAAA[\s\S]*?SpoofAction\s*\(\s*\{([^}]+)\}\s*\)',
-        content
-    )
-    if m_v6:
-        raw_ips = re.findall(r'"([^"]+)"', m_v6.group(1))
-        data["spoof_ipv6"] = [ip.strip() for ip in raw_ips if ip.strip()]
+    idx_v6 = content.find("-- Block AAAA")
+    if idx_v6 != -1:
+        idx_sp6 = content.find("SpoofAction", idx_v6)
+        if idx_sp6 != -1 and idx_sp6 - idx_v6 < 1000:
+            b_open = content.find("{", idx_sp6)
+            b_close = content.find("}", b_open)
+            if b_open != -1 and b_close != -1:
+                raw_ips = re.findall(r'"([^"]+)"', content[b_open:b_close])
+                data["spoof_ipv6"] = [ip.strip() for ip in raw_ips if ip.strip()]
 
     # 2. Parse Block A (IPv4 Spoof)
-    m_v4 = re.search(
-        r'-- Block A\b[\s\S]*?SpoofAction\s*\(\s*\{([^}]+)\}\s*\)',
-        content
-    )
-    if m_v4:
-        raw_ips = re.findall(r'"([^"]+)"', m_v4.group(1))
-        data["spoof_ipv4"] = [ip.strip() for ip in raw_ips if ip.strip()]
+    idx_v4 = content.find("-- Block A\n")
+    if idx_v4 == -1:
+        idx_v4 = content.find("-- Block A ")
+    if idx_v4 != -1:
+        idx_sp4 = content.find("SpoofAction", idx_v4)
+        if idx_sp4 != -1 and idx_sp4 - idx_v4 < 1000:
+            b_open = content.find("{", idx_sp4)
+            b_close = content.find("}", b_open)
+            if b_open != -1 and b_close != -1:
+                raw_ips = re.findall(r'"([^"]+)"', content[b_open:b_close])
+                data["spoof_ipv4"] = [ip.strip() for ip in raw_ips if ip.strip()]
 
     # 3. Parse Whitelist domains
-    wl_domains = re.findall(r'whitelistSMN:add\s*\(\s*newDNSName\s*\(\s*"([^"]+)"\s*\)\s*\)', content)
-    data["whitelist"] = [d.strip() for d in wl_domains if d.strip()]
+    for line in content.splitlines():
+        if "whitelistSMN:add" in line:
+            m_wl = re.search(r'newDNSName\s*\(\s*"([^"]+)"\s*\)', line)
+            if m_wl and m_wl.group(1).strip():
+                data["whitelist"].append(m_wl.group(1).strip())
 
     # 4. Parse ACL
-    m_acl = re.search(r'setACL\s*\(\s*\{([^}]+)\}\s*\)', content)
-    if m_acl:
-        raw_acls = re.findall(r'"([^"]+)"', m_acl.group(1))
-        data["acl"] = [a.strip() for a in raw_acls if a.strip()]
+    idx_acl = content.find("setACL(")
+    if idx_acl != -1:
+        b_open = content.find("{", idx_acl)
+        b_close = content.find("}", b_open)
+        if b_open != -1 and b_close != -1:
+            raw_acls = re.findall(r'"([^"]+)"', content[b_open:b_close])
+            data["acl"] = [a.strip() for a in raw_acls if a.strip()]
 
     # 5. Parse Webserver password & port
     m_port = re.search(r'webserver\s*\(\s*"[^"]*:(\d+)"\s*\)', content)
     if m_port:
         data["webserver_port"] = m_port.group(1)
 
-    m_pw = re.search(r'setWebserverConfig\s*\(\s*\{[\s\S]*?password\s*=\s*"([^"]*)"', content)
-    if m_pw:
-        data["webserver_password"] = m_pw.group(1)
+    idx_ws = content.find("setWebserverConfig(")
+    if idx_ws != -1:
+        b_end = content.find(")", idx_ws)
+        if b_end != -1:
+            ws_str = content[idx_ws:b_end]
+            m_pw = re.search(r'password\s*=\s*"([^"]*)"', ws_str)
+            if m_pw:
+                data["webserver_password"] = m_pw.group(1)
+                data["web_access_value"] = m_pw.group(1)
 
     # 6. Parse Rate Limit
     m_rl = re.search(r'addAction\s*\(\s*MaxQPSIPRule\s*\(\s*(\d+)\s*\)\s*,\s*(\w+)\s*\([^)]*\)\s*\)', content)
@@ -1119,26 +1194,41 @@ def parse_dnsdist_structured(content):
     if m_pol:
         data["server_policy"] = m_pol.group(1)
 
-    sb_list = re.findall(r'newServer\s*\(\s*\{([^}]+)\}\s*\)', content)
-    for sb in sb_list:
-        m_addr = re.search(r'address\s*=\s*"([^"]+)"', sb)
-        m_name = re.search(r'name\s*=\s*"([^"]+)"', sb)
-        m_chk = re.search(r'checkName\s*=\s*"([^"]+)"', sb)
-        m_to = re.search(r'timeout\s*=\s*(\d+)', sb)
-        if m_addr:
-            data["upstream_servers"].append({
-                "name": m_name.group(1) if m_name else "",
-                "address": m_addr.group(1),
-                "checkName": m_chk.group(1) if m_chk else "",
-                "timeout": int(m_to.group(1)) if m_to else 2
-            })
+    idx_srv = 0
+    while True:
+        idx_ns = content.find("newServer(", idx_srv)
+        if idx_ns == -1:
+            break
+        b_open = content.find("{", idx_ns)
+        b_close = content.find("}", b_open)
+        if b_open != -1 and b_close != -1:
+            sb = content[b_open:b_close]
+            m_addr = re.search(r'address\s*=\s*"([^"]+)"', sb)
+            m_name = re.search(r'name\s*=\s*"([^"]+)"', sb)
+            m_chk = re.search(r'checkName\s*=\s*"([^"]+)"', sb)
+            m_to = re.search(r'timeout\s*=\s*(\d+)', sb)
+            if m_addr:
+                data["upstream_servers"].append({
+                    "name": m_name.group(1) if m_name else "",
+                    "address": m_addr.group(1),
+                    "checkName": m_chk.group(1) if m_chk else "",
+                    "timeout": int(m_to.group(1)) if m_to else 2
+                })
+            idx_srv = b_close + 1
+        else:
+            break
 
     # 8. Parse Custom DNS Override
-    m_cb = re.search(r'-- Custom DNS Override([\s\S]*?)(?:-- SafeSearch|-- Block AAAA|-- Rate Limit)', content)
-    if m_cb:
-        records = re.findall(r'addAction\s*\(\s*"([^"]+)"\s*,\s*SpoofAction\s*\(\s*\{?"([^"}]+)"\}?\s*\)\s*\)', m_cb.group(1))
-        for dom, ip in records:
-            data["custom_dns"].append({"domain": dom, "ip": ip})
+    idx_cust = content.find("-- Custom DNS Override")
+    if idx_cust != -1:
+        end_markers = ["-- SafeSearch", "-- Block AAAA", "-- Rate Limit"]
+        end_pos = [content.find(m, idx_cust) for m in end_markers if content.find(m, idx_cust) != -1]
+        end_cust = min(end_pos) if end_pos else len(content)
+        cust_section = content[idx_cust:end_cust]
+        for line in cust_section.splitlines():
+            m_cust = re.search(r'addAction\s*\(\s*"([^"]+)"\s*,\s*SpoofAction\s*\(\s*\{?"([^"}]+)"\}?\s*\)\s*\)', line)
+            if m_cust:
+                data["custom_dns"].append({"domain": m_cust.group(1), "ip": m_cust.group(2)})
 
     # 9. Parse SafeSearch
     data["safesearch"] = {
@@ -1153,6 +1243,7 @@ def parse_dnsdist_structured(content):
 
     return data
 
+
 def update_dnsdist_structured(content, new_data):
     # 1. Update IPv6 SpoofAction
     if "spoof_ipv6" in new_data:
@@ -1160,9 +1251,14 @@ def update_dnsdist_structured(content, new_data):
         if not ips_v6:
             raise ValueError("IPv6 Spoof IP tidak boleh kosong")
         formatted_v6 = '{"' + '","'.join(ips_v6) + '"}'
-        pattern_v6 = r'(-- Block AAAA[\s\S]*?SpoofAction\s*\(\s*)\{[^}]+\}(\s*\))'
-        if re.search(pattern_v6, content):
-            content = re.sub(pattern_v6, rf'\g<1>{formatted_v6}\g<2>', content, count=1)
+        idx_v6 = content.find("-- Block AAAA")
+        if idx_v6 != -1:
+            idx_sp6 = content.find("SpoofAction", idx_v6)
+            if idx_sp6 != -1:
+                b_open = content.find("{", idx_sp6)
+                b_close = content.find("}", b_open)
+                if b_open != -1 and b_close != -1:
+                    content = content[:b_open] + formatted_v6 + content[b_close + 1:]
         else:
             raise ValueError("Tidak dapat menemukan blok aturan Block AAAA (SpoofAction IPv6) di config")
 
@@ -1172,9 +1268,16 @@ def update_dnsdist_structured(content, new_data):
         if not ips_v4:
             raise ValueError("IPv4 Spoof IP tidak boleh kosong")
         formatted_v4 = '{"' + '","'.join(ips_v4) + '"}'
-        pattern_v4 = r'(-- Block A\b[\s\S]*?SpoofAction\s*\(\s*)\{[^}]+\}(\s*\))'
-        if re.search(pattern_v4, content):
-            content = re.sub(pattern_v4, rf'\g<1>{formatted_v4}\g<2>', content, count=1)
+        idx_v4 = content.find("-- Block A\n")
+        if idx_v4 == -1:
+            idx_v4 = content.find("-- Block A ")
+        if idx_v4 != -1:
+            idx_sp4 = content.find("SpoofAction", idx_v4)
+            if idx_sp4 != -1:
+                b_open = content.find("{", idx_sp4)
+                b_close = content.find("}", b_open)
+                if b_open != -1 and b_close != -1:
+                    content = content[:b_open] + formatted_v4 + content[b_close + 1:]
         else:
             raise ValueError("Tidak dapat menemukan blok aturan Block A (SpoofAction IPv4) di config")
 
@@ -1187,18 +1290,21 @@ def update_dnsdist_structured(content, new_data):
                 continue
             if not d.endswith("."):
                 d += "."
-            wl_list.append(d)
-        
+            if d not in wl_list:
+                wl_list.append(d)
+
         wl_lines = [f'whitelistSMN:add(newDNSName("{d}"))' for d in wl_list]
         wl_block_replacement = "\n".join(wl_lines) if wl_lines else "-- (No whitelist entries)"
 
-        pattern_wl = r'(local\s+whitelistSMN\s*=\s*newSuffixMatchNode\(\s*\))[\s\S]*?(addAction\s*\(\s*SuffixMatchNodeRule\s*\(\s*whitelistSMN\s*\))'
-        if re.search(pattern_wl, content):
-            content = re.sub(pattern_wl, rf'\g<1>\n\n{wl_block_replacement}\n\n\g<2>', content, count=1)
+        idx_wl = content.find("local whitelistSMN = newSuffixMatchNode()")
+        if idx_wl != -1:
+            idx_next = content.find("addAction(SuffixMatchNodeRule(whitelistSMN)", idx_wl)
+            if idx_next != -1:
+                content = content[:idx_wl] + f"local whitelistSMN = newSuffixMatchNode()\n\n{wl_block_replacement}\n\n" + content[idx_next:]
         else:
             raise ValueError("Tidak dapat menemukan blok Whitelist (whitelistSMN) di config")
 
-    # 4. Update ACL (Baris 1 dan 2: 127.0.0.0/8 dan ::1/128 default tidak bisa dihapus)
+    # 4. Update ACL
     if "acl" in new_data:
         user_acls = [a.strip() for a in new_data["acl"] if a.strip()]
         final_acls = ["127.0.0.0/8", "::1/128"]
@@ -1209,26 +1315,39 @@ def update_dnsdist_structured(content, new_data):
         acl_lines = ',\n    '.join([f'"{a}"' for a in final_acls])
         acl_replacement = f'setACL({{\n    {acl_lines}\n}})'
 
-        pattern_acl = r'setACL\s*\(\s*\{[^}]*\}\s*\)'
-        if re.search(pattern_acl, content):
-            content = re.sub(pattern_acl, acl_replacement, content, count=1)
+        idx_acl = content.find("setACL(")
+        if idx_acl != -1:
+            b_close = content.find(")", idx_acl)
+            if b_close != -1:
+                content = content[:idx_acl] + acl_replacement + content[b_close + 1:]
         else:
             raise ValueError("Tidak dapat menemukan blok setACL di config")
 
         # Sinkronkan parameter acl di setWebserverConfig jika ada
-        acl_comma_str = ','.join(final_acls)
-        content = re.sub(r'(setWebserverConfig\s*\(\s*\{[\s\S]*?acl\s*=\s*)"[^"]*"', rf'\g<1>"{acl_comma_str}"', content, count=1)
+        idx_ws = content.find("setWebserverConfig(")
+        if idx_ws != -1:
+            b_end = content.find(")", idx_ws)
+            if b_end != -1:
+                ws_block = content[idx_ws:b_end]
+                acl_comma_str = ','.join(final_acls)
+                ws_block = re.sub(r'(acl\s*=\s*)"[^"]*"', rf'\g<1>"{acl_comma_str}"', ws_block, count=1)
+                content = content[:idx_ws] + ws_block + content[b_end:]
 
-    # 5. Update Webserver Password
-    if "webserver_password" in new_data:
-        new_pw = new_data["webserver_password"].strip()
-        if not new_pw:
+    # 5. Update Webserver Access Credential
+    access_cred = new_data.get("web_access_value") if "web_access_value" in new_data else new_data.get("web_panel_auth")
+    if access_cred is not None:
+        new_val = str(access_cred).strip()
+        if not new_val:
             raise ValueError("Password PowerDNS Web Panel tidak boleh kosong")
-        pattern_pw = r'(setWebserverConfig\s*\(\s*\{[\s\S]*?password\s*=\s*)"[^"]*"'
-        if re.search(pattern_pw, content):
-            content = re.sub(pattern_pw, rf'\g<1>"{new_pw}"', content, count=1)
+        idx_ws = content.find("setWebserverConfig(")
+        if idx_ws != -1:
+            b_end = content.find(")", idx_ws)
+            if b_end != -1:
+                ws_block = content[idx_ws:b_end]
+                ws_block = re.sub(r'(password\s*=\s*)"[^"]*"', rf'\g<1>"{new_val}"', ws_block, count=1)
+                content = content[:idx_ws] + ws_block + content[b_end:]
         else:
-            raise ValueError("Tidak dapat menemukan setWebserverConfig password di config")
+            raise ValueError("Tidak dapat menemukan setWebserverConfig di config")
 
     # 6. Update Rate Limit
     if "rate_limit" in new_data:
@@ -1243,9 +1362,15 @@ def update_dnsdist_structured(content, new_data):
         else:
             rl_code = ""
 
-        pattern_rl = r'(-- Rate Limit\s*[-]*\s*\n)[\s\S]*?(\n\s*----------------------------------------------------\n-- Forward Normal DNS)'
-        if re.search(pattern_rl, content):
-            content = re.sub(pattern_rl, rf'\g<1>\n{rl_code}\n\g<2>', content, count=1)
+        idx_rl = content.find("-- Rate Limit")
+        if idx_rl != -1:
+            idx_fwd = content.find("-- Forward Normal DNS", idx_rl)
+            if idx_fwd != -1:
+                sep_line = content.rfind("----------------------------------------------------", idx_rl, idx_fwd)
+                if sep_line == -1:
+                    sep_line = idx_fwd
+                new_rl_sec = f"-- Rate Limit\n----------------------------------------------------\n{rl_code}\n\n"
+                content = content[:idx_rl] + new_rl_sec + content[sep_line:]
 
     # 7. Update Upstream Servers & Policy
     if "upstream_servers" in new_data or "server_policy" in new_data:
@@ -1268,9 +1393,15 @@ def update_dnsdist_structured(content, new_data):
                 srv_lines.append('newServer({\n    ' + ',\n    '.join(props) + '\n})')
 
             srv_block = '\n\n'.join(srv_lines) + f'\n\nsetServerPolicy({policy})'
-            pattern_backend = r'(-- Backend\s*[-]*\s*\n)[\s\S]*?(\n\s*-- Packet Cache)'
-            if re.search(pattern_backend, content):
-                content = re.sub(pattern_backend, rf'\g<1>\n{srv_block}\n\g<2>', content, count=1)
+            idx_bk = content.find("-- Backend")
+            if idx_bk != -1:
+                idx_pc = content.find("-- Packet Cache", idx_bk)
+                if idx_pc != -1:
+                    sep_line = content.rfind("----------------------------------------------------", idx_bk, idx_pc)
+                    if sep_line == -1:
+                        sep_line = idx_pc
+                    new_bk_sec = f"-- Backend\n----------------------------------------------------\n{srv_block}\n\n"
+                    content = content[:idx_bk] + new_bk_sec + content[sep_line:]
 
     # 8. Update Custom DNS Override
     if "custom_dns" in new_data:
@@ -1286,12 +1417,23 @@ def update_dnsdist_structured(content, new_data):
         custom_block_content = "\n".join(rec_lines)
         header_custom = "----------------------------------------------------\n-- Custom DNS Override\n----------------------------------------------------"
 
-        if "-- Custom DNS Override" in content:
-            pattern_c = r'(-- Custom DNS Override\s*[-]*\s*\n)[\s\S]*?(\n\s*----------------------------------------------------\n--(?: SafeSearch| Block AAAA))'
-            content = re.sub(pattern_c, rf'\g<1>\n{custom_block_content}\n\g<2>', content, count=1)
+        idx_cd = content.find("-- Custom DNS Override")
+        if idx_cd != -1:
+            end_markers = ["-- SafeSearch", "-- Block AAAA"]
+            end_pos = [content.find(m, idx_cd) for m in end_markers if content.find(m, idx_cd) != -1]
+            end_cd = min(end_pos) if end_pos else len(content)
+            sep_line = content.rfind("----------------------------------------------------", idx_cd, end_cd)
+            if sep_line == -1:
+                sep_line = end_cd
+            new_cd_sec = f"{header_custom}\n\n{custom_block_content}\n\n"
+            content = content[:idx_cd] + new_cd_sec + content[sep_line:]
         elif custom_block_content:
-            pattern_before = r'(\n----------------------------------------------------\n-- Block AAAA)'
-            content = re.sub(pattern_before, f'\n{header_custom}\n\n{custom_block_content}\n\\1', content, count=1)
+            idx_aaaa = content.find("-- Block AAAA")
+            if idx_aaaa != -1:
+                sep_line = content.rfind("----------------------------------------------------", 0, idx_aaaa)
+                if sep_line == -1:
+                    sep_line = idx_aaaa
+                content = content[:sep_line] + f"{header_custom}\n\n{custom_block_content}\n\n" + content[sep_line:]
 
     # 9. Update SafeSearch Enforcement
     if "safesearch" in new_data:
@@ -1325,19 +1467,31 @@ addAction(AndRule({SuffixMatchNodeRule(ddgSafeSMN), QTypeRule(DNSQType.A)}), Spo
         ss_content = "\n\n".join(ss_blocks)
         header_ss = "----------------------------------------------------\n-- SafeSearch Enforcement\n----------------------------------------------------"
 
-        if "-- SafeSearch Enforcement" in content:
-            pattern_ss = r'(-- SafeSearch Enforcement\s*[-]*\s*\n)[\s\S]*?(\n\s*----------------------------------------------------\n-- Block AAAA)'
-            content = re.sub(pattern_ss, rf'\g<1>\n{ss_content}\n\g<2>', content, count=1)
+        idx_ss = content.find("-- SafeSearch Enforcement")
+        if idx_ss != -1:
+            idx_aaaa = content.find("-- Block AAAA", idx_ss)
+            if idx_aaaa != -1:
+                sep_line = content.rfind("----------------------------------------------------", idx_ss, idx_aaaa)
+                if sep_line == -1:
+                    sep_line = idx_aaaa
+                new_ss_sec = f"{header_ss}\n\n{ss_content}\n\n"
+                content = content[:idx_ss] + new_ss_sec + content[sep_line:]
         elif ss_content:
-            pattern_before = r'(\n----------------------------------------------------\n-- Block AAAA)'
-            content = re.sub(pattern_before, f'\n{header_ss}\n\n{ss_content}\n\\1', content, count=1)
+            idx_aaaa = content.find("-- Block AAAA")
+            if idx_aaaa != -1:
+                sep_line = content.rfind("----------------------------------------------------", 0, idx_aaaa)
+                if sep_line == -1:
+                    sep_line = idx_aaaa
+                content = content[:sep_line] + f"{header_ss}\n\n{ss_content}\n\n" + content[sep_line:]
 
     # 10. Update Query Log
     if "query_logging" in new_data:
         ql = new_data["query_logging"]
         ql_code = 'addAction(AllRule(), LogAction("/var/log/dnsdist_queries.log", false, false, false))' if ql else ''
-        pattern_ql = r'(-- Query Log\s*[-]*\s*\n)[\s\S]*$'
-        content = re.sub(pattern_ql, rf'\g<1>\n{ql_code}\n', content, count=1)
+        idx_ql = content.find("-- Query Log")
+        if idx_ql != -1:
+            new_ql_sec = f"-- Query Log\n----------------------------------------------------\n{ql_code}\n"
+            content = content[:idx_ql] + new_ql_sec
 
     return content
 
@@ -1812,9 +1966,14 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     backup_path = f"{DNSDIST_CONF}.bak_{timestamp}"
                     shutil.copy2(DNSDIST_CONF, backup_path)
+                    try:
+                        os.chmod(backup_path, 0o600)
+                    except Exception:
+                        pass
                 
-                # Write new config
-                with open(DNSDIST_CONF, "w", encoding="utf-8") as f:
+                # Write new config with secure 0640 permissions
+                fd = os.open(DNSDIST_CONF, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640)
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(content)
 
                 # Set proper ownership & permissions (root:_dnsdist 640)
@@ -1860,8 +2019,13 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 backup_path = f"{DNSDIST_CONF}.bak_{timestamp}"
                 shutil.copy2(DNSDIST_CONF, backup_path)
+                try:
+                    os.chmod(backup_path, 0o600)
+                except Exception:
+                    pass
 
-                with open(DNSDIST_CONF, "w", encoding="utf-8") as f:
+                fd = os.open(DNSDIST_CONF, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640)
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(new_content)
 
                 try:
@@ -1938,8 +2102,13 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 backup_path = f"{UNBOUND_CONF}.bak_{timestamp}"
                 shutil.copy2(UNBOUND_CONF, backup_path)
+                try:
+                    os.chmod(backup_path, 0o600)
+                except Exception:
+                    pass
 
-                with open(UNBOUND_CONF, "w", encoding="utf-8") as f:
+                fd = os.open(UNBOUND_CONF, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(new_content)
                 os.chmod(UNBOUND_CONF, 0o644)
 
@@ -1988,8 +2157,13 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 backup_path = f"{UNBOUND_CONF}.bak_{timestamp}"
                 shutil.copy2(UNBOUND_CONF, backup_path)
+                try:
+                    os.chmod(backup_path, 0o600)
+                except Exception:
+                    pass
 
-                with open(UNBOUND_CONF, "w", encoding="utf-8") as f:
+                fd = os.open(UNBOUND_CONF, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
                     f.write(content)
                 os.chmod(UNBOUND_CONF, 0o644)
 

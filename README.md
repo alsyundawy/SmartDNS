@@ -62,7 +62,7 @@ Developed and maintained by <a href="https://mynoc.id/" target="_blank">**MyNOC.
 
 ### 🌎 Language / Bahasa
 
-[English Documentation](#-english-documentation) • [Dokumentasi Bahasa Indonesia](#-dokumentasi-bahasa-indonesia)
+[English Documentation](#-english-documentation) • [Dokumentasi Bahasa Indonesia](#-dokumentasi-bahasa-indonesia) • [📖 Panduan Lengkap (All-in-One Guide)](docs/GUIDE.md)
 
 </div>
 

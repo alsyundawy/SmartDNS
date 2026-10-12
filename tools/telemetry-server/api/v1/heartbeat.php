@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SmartDNS Telemetry Receiver API
  * Target: https://telemetry.alsyundawy.com/api/v1/heartbeat.php
@@ -44,7 +45,8 @@ if (!is_array($payload) || json_last_error() !== JSON_ERROR_NONE) {
 
 // 3. Strict UUID format validation (prevent path traversal)
 $uuid = $payload['uuid'] ?? '';
-if (!is_string($uuid) || !preg_match('/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/', $uuid)) {
+$uuid_pattern = '/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/';
+if (!is_string($uuid) || !preg_match($uuid_pattern, $uuid)) {
     http_response_code(400);
     echo json_encode([
         'status' => 'error',
@@ -75,15 +77,13 @@ $payload['server_meta'] = [
 
 // 6. Ensure data directory exists
 $data_dir = dirname(__DIR__, 2) . '/data/nodes';
-if (!is_dir($data_dir)) {
-    if (!mkdir($data_dir, 0750, true) && !is_dir($data_dir)) {
-        http_response_code(500);
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Internal storage directory unavailable'
-        ], JSON_UNESCAPED_SLASHES);
-        exit;
-    }
+if (!is_dir($data_dir) && !mkdir($data_dir, 0750, true) && !is_dir($data_dir)) {
+    http_response_code(500);
+    echo json_encode([
+        'status' => 'error',
+        'message' => 'Internal storage directory unavailable'
+    ], JSON_UNESCAPED_SLASHES);
+    exit;
 }
 
 // 7. Atomic write per UUID

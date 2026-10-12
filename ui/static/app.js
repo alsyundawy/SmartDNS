@@ -550,7 +550,7 @@ async function fetchStructuredDNSDistConfig() {
 
       // Populate Webserver Password
       document.getElementById("cfg-webserver-password").value =
-        data.webserver_password || "";
+        data.web_access_value || data.webserver_password || "";
 
       // Update PowerDNS URL link dynamically
       const serverHost = window.location.hostname;
@@ -770,7 +770,7 @@ async function saveStructuredDNSDistConfig() {
     spoof_ipv6: ips_v6,
     whitelist: structuredConfigState.whitelist,
     acl: structuredConfigState.acl,
-    webserver_password: newPassword,
+    web_access_value: newPassword,
     rate_limit: {
       enabled: document.getElementById("cfg-ratelimit-enable")
         ? document.getElementById("cfg-ratelimit-enable").checked

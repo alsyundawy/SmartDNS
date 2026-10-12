@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SmartDNS Fleet Monitoring Dashboard
  * Domain: alsyundawy.com
@@ -13,7 +14,13 @@ $provided_key = $_GET['key'] ?? '';
 
 if ($dashboard_secret !== '' && $provided_key !== $dashboard_secret) {
     http_response_code(403);
-    echo '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>403 Forbidden</title></head><body style="background:#0f172a;color:#f8fafc;font-family:sans-serif;padding:40px;text-align:center;"><h2>🔒 Access Restricted</h2><p>Tambahkan parameter <code>?key=alsyundawy2026</code> pada URL untuk mengakses dashboard fleet.</p></body></html>';
+    $access_msg = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+        . '<title>403 Forbidden</title></head>'
+        . '<body style="background:#0f172a;color:#f8fafc;font-family:sans-serif;padding:40px;text-align:center;">'
+        . '<h2>🔒 Access Restricted</h2>'
+        . '<p>Tambahkan parameter <code>?key=alsyundawy2026</code> pada URL untuk mengakses dashboard fleet.</p>'
+        . '</body></html>';
+    echo $access_msg;
     exit;
 }
 
@@ -62,6 +69,9 @@ usort($nodes, static function ($a, $b) {
     }
     return $a['is_online'] ? -1 : 1;
 });
+
+$online_nodes = array_filter($nodes, static fn($n) => $n['is_online']);
+$online_count = count($online_nodes);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -177,7 +187,10 @@ usort($nodes, static function ($a, $b) {
     <div class="header">
         <div class="title">
             <h1>🛡️ SmartDNS Fleet Monitor</h1>
-            <p>Sistem Pemantauan Node DNS Terpusat — <a href="https://alsyundawy.com" style="color:var(--primary);text-decoration:none;">alsyundawy.com</a></p>
+            <p>
+                Sistem Pemantauan Node DNS Terpusat —
+                <a href="https://alsyundawy.com" style="color:var(--primary);text-decoration:none;">alsyundawy.com</a>
+            </p>
         </div>
         <div class="stats">
             <div class="stat-card">
@@ -186,17 +199,19 @@ usort($nodes, static function ($a, $b) {
             </div>
             <div class="stat-card">
                 Online (≤10m)
-                <strong style="color:var(--success);"><?= count(array_filter($nodes, static fn($n) => $n['is_online'])); ?></strong>
+                <strong style="color:var(--success);"><?= $online_count; ?></strong>
             </div>
         </div>
     </div>
 
-    <?php if (empty($nodes)): ?>
-        <div style="background:var(--card-bg);border:1px solid var(--border);padding:40px;border-radius:8px;text-align:center;color:var(--muted);">
-            <h3>Belum ada data node yang masuk</h3>
-            <p style="margin-top:8px;">Pastikan node SmartDNS Anda telah menjalankan cron <code>smartdns-heartbeat</code> ke endpoint ini.</p>
+    <?php if (empty($nodes)) : ?>
+        <div style="background:var(--card-bg);border:1px solid var(--border);padding:40px;text-align:center;">
+            <h3 style="color:var(--muted);">Belum ada data node yang masuk</h3>
+            <p style="margin-top:8px;color:var(--muted);">
+                Pastikan node SmartDNS telah menjalankan cron <code>smartdns-heartbeat</code> ke endpoint ini.
+            </p>
         </div>
-    <?php else: ?>
+    <?php else : ?>
         <table>
             <thead>
                 <tr>
@@ -212,7 +227,7 @@ usort($nodes, static function ($a, $b) {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($nodes as $node): ?>
+                <?php foreach ($nodes as $node) : ?>
                 <tr>
                     <td>
                         <span class="<?= $node['is_online'] ? 'online' : 'offline'; ?>">
@@ -221,17 +236,35 @@ usort($nodes, static function ($a, $b) {
                     </td>
                     <td><strong><?= htmlspecialchars($node['hostname'], ENT_QUOTES); ?></strong></td>
                     <td><span class="badge"><?= htmlspecialchars($node['ip'], ENT_QUOTES); ?></span></td>
-                    <td><?= htmlspecialchars($node['os'], ENT_QUOTES); ?> (<?= htmlspecialchars($node['arch'], ENT_QUOTES); ?>)</td>
-                    <td><span class="badge" style="color:var(--primary);"><?= htmlspecialchars($node['version'], ENT_QUOTES); ?></span></td>
-                    <td><?= (int) ($node['ram'] / 1024); ?> GB RAM / <?= htmlspecialchars($node['cpu'], ENT_QUOTES); ?></td>
+                    <td>
+                        <?= htmlspecialchars($node['os'], ENT_QUOTES); ?>
+                        (<?= htmlspecialchars($node['arch'], ENT_QUOTES); ?>)
+                    </td>
+                    <td>
+                        <span class="badge" style="color:var(--primary);">
+                            <?= htmlspecialchars($node['version'], ENT_QUOTES); ?>
+                        </span>
+                    </td>
+                    <td>
+                        <?= (int) ($node['ram'] / 1024); ?> GB RAM /
+                        <?= htmlspecialchars($node['cpu'], ENT_QUOTES); ?>
+                    </td>
                     <td>
                         <div class="features">
-                            <?php if ($node['dnssec']): ?><span class="feat-tag">DNSSEC</span><?php endif; ?>
-                            <?php if ($node['ratelimit']): ?><span class="feat-tag">RATE-LIMIT</span><?php endif; ?>
+                            <?php if ($node['dnssec']) : ?>
+                                <span class="feat-tag">DNSSEC</span>
+                            <?php endif; ?>
+                            <?php if ($node['ratelimit']) : ?>
+                                <span class="feat-tag">RATE-LIMIT</span>
+                            <?php endif; ?>
                         </div>
                     </td>
                     <td><?= htmlspecialchars($node['uptime'], ENT_QUOTES); ?></td>
-                    <td><span style="font-size:0.8rem;color:var(--muted);"><?= htmlspecialchars($node['last_seen'], ENT_QUOTES); ?></span></td>
+                    <td>
+                        <span style="font-size:0.8rem;color:var(--muted);">
+                            <?= htmlspecialchars($node['last_seen'], ENT_QUOTES); ?>
+                        </span>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -239,7 +272,8 @@ usort($nodes, static function ($a, $b) {
     <?php endif; ?>
 
     <div class="footer">
-        SmartDNS Telemetry Server &copy; <?= date('Y'); ?> <a href="https://alsyundawy.com" target="_blank">ALSYUNDAWY IT SOLUTION</a>.
+        SmartDNS Telemetry Server &copy; <?= date('Y'); ?>
+        <a href="https://alsyundawy.com" target="_blank">ALSYUNDAWY IT SOLUTION</a>.
     </div>
 </body>
 </html>
