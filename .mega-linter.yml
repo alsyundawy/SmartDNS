@@ -20,12 +20,11 @@ DISABLE_LINTERS:
   - REPOSITORY_DEVSKIM
 
 # Linters enabled tailored to SmartDNS repository:
-# Shell (Bash), Python, JavaScript, CSS, HTML, Markdown, YAML
+# Shell (Bash), JavaScript, CSS, HTML, Markdown, YAML, Actions
 ENABLE_LINTERS:
   - BASH_SHELLCHECK
   - BASH_SHFMT
-  - PYTHON_BLACK
-  - PYTHON_FLAKE8
+  - ACTION_ACTIONLINT
   - JAVASCRIPT_PRETTIER
   - CSS_PRETTIER
   - HTML_PRETTIER
