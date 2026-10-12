@@ -1725,6 +1725,9 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             return self._serve_file(os.path.join(STATIC_DIR, "index.html"), "text/html; charset=utf-8")
         elif path.startswith("/static/"):
             filename = os.path.basename(path)
+            if not re.fullmatch(r'^[a-zA-Z0-9_.-]+$', filename) or ".." in filename:
+                self.send_error(400, "Invalid filename")
+                return
             file_path = os.path.join(STATIC_DIR, filename)
             mime = "text/plain"
             if filename.endswith(".css"):
@@ -2312,11 +2315,16 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             return self._send_json({"error": "Not Found"}, 404)
 
     def _serve_file(self, file_path, content_type):
-        if not os.path.exists(file_path):
+        safe_path = os.path.realpath(file_path)
+        safe_static_dir = os.path.realpath(STATIC_DIR)
+        if not (safe_path == safe_static_dir or safe_path.startswith(safe_static_dir + os.sep)):
+            self.send_error(403, "Forbidden")
+            return
+        if not os.path.isfile(safe_path):
             self.send_error(404, "File not found")
             return
         try:
-            with open(file_path, "rb") as f:
+            with open(safe_path, "rb") as f:
                 content = f.read()
             self.send_response(200)
             self.send_header("Content-Type", content_type)
