@@ -34,9 +34,9 @@ CHANGELOG:
 
 # 🚀 SmartDNS
 
-### High-Performance Recursive DNS Platform Powered by Unbound, dnsdist & SmartDNS Web UI
+## High-Performance Recursive DNS Platform Powered by Unbound, dnsdist & SmartDNS Web UI
 
-### Platform DNS Rekursif Kinerja Tinggi Ditenagai oleh Unbound, dnsdist & SmartDNS Web UI
+## Platform DNS Rekursif Kinerja Tinggi Ditenagai oleh Unbound, dnsdist & SmartDNS Web UI
 
 Developed and maintained by <a href="https://mynoc.id/" target="_blank">**MyNOC.ID**</a> & <a href="https://alsyundawy.com" target="_blank">**ALSYUNDAWY IT SOLUTION**</a>
 

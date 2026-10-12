@@ -11,12 +11,12 @@ import re
 import json
 import time
 import shutil
-import hashlib
 import secrets
 import tempfile
 import subprocess
 from datetime import datetime
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
 from urllib.parse import urlparse, parse_qs
 
 # Base configuration paths
@@ -28,20 +28,26 @@ UPDATE_SCRIPT = "/opt/blocklist/update-blocklist.sh"
 UPDATE_LOG = "/opt/blocklist/update.log"
 CONFIG_FILE = "/opt/smartdns-ui/config.json"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
+
+INDEX_HTML = "index.html"
+TEXT_HTML_UTF8 = "text/html; charset=utf-8"
+APP_CSS = "app.css"
+TEXT_CSS_UTF8 = "text/css; charset=utf-8"
+APP_JS = "app.js"
+APP_JS_UTF8 = "application/javascript; charset=utf-8"
+
 STATIC_ASSET_MAP = {
-    "/": ("index.html", "text/html; charset=utf-8"),
-    "/index.html": ("index.html", "text/html; charset=utf-8"),
-    "/static/index.html": ("index.html", "text/html; charset=utf-8"),
-    "/static/app.css": ("app.css", "text/css; charset=utf-8"),
-    "/static/app.js": ("app.js", "application/javascript; charset=utf-8"),
+    "/": (INDEX_HTML, TEXT_HTML_UTF8),
+    "/index.html": (INDEX_HTML, TEXT_HTML_UTF8),
+    "/static/index.html": (INDEX_HTML, TEXT_HTML_UTF8),
+    "/static/app.css": (APP_CSS, TEXT_CSS_UTF8),
+    "/static/app.js": (APP_JS, APP_JS_UTF8),
 }
 STATIC_SAFE_FILES = {
-    "index.html": "index.html",
-    "app.css": "app.css",
-    "app.js": "app.js",
+    INDEX_HTML: INDEX_HTML,
+    APP_CSS: APP_CSS,
+    APP_JS: APP_JS,
 }
-
-from pathlib import Path
 
 # Repo directory: bisa di-override oleh systemd saat GUI sudah dipasang.
 SMARTDNS_DIR = os.environ.get("SMARTDNS_DIR", "").strip()
@@ -483,13 +489,17 @@ def parse_unbound_structured(content):
     data["interfaces"] = [i.strip() for i in interfaces if i.strip()]
 
     m = re.search(r'^\s*do-ip4:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["do_ip4"] = (m.group(1).lower() == "yes")
+    if m:
+        data["do_ip4"] = (m.group(1).lower() == "yes")
     m = re.search(r'^\s*do-ip6:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["do_ip6"] = (m.group(1).lower() == "yes")
+    if m:
+        data["do_ip6"] = (m.group(1).lower() == "yes")
     m = re.search(r'^\s*do-udp:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["do_udp"] = (m.group(1).lower() == "yes")
+    if m:
+        data["do_udp"] = (m.group(1).lower() == "yes")
     m = re.search(r'^\s*do-tcp:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["do_tcp"] = (m.group(1).lower() == "yes")
+    if m:
+        data["do_tcp"] = (m.group(1).lower() == "yes")
 
     acls = re.findall(r'^\s*access-control:\s*([^\s]+)\s+allow', content, re.MULTILINE)
     data["acl"] = [a.strip() for a in acls if a.strip()]
@@ -498,43 +508,60 @@ def parse_unbound_structured(content):
     data["domain_insecure"] = [d.strip() for d in insecure if d.strip()]
 
     m = re.search(r'^\s*hide-identity:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["hide_identity"] = (m.group(1).lower() == "yes")
+    if m:
+        data["hide_identity"] = (m.group(1).lower() == "yes")
     m = re.search(r'^\s*hide-version:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["hide_version"] = (m.group(1).lower() == "yes")
+    if m:
+        data["hide_version"] = (m.group(1).lower() == "yes")
 
     m = re.search(r'^\s*prefetch:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["prefetch"] = (m.group(1).lower() == "yes")
+    if m:
+        data["prefetch"] = (m.group(1).lower() == "yes")
     m = re.search(r'^\s*prefetch-key:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["prefetch_key"] = (m.group(1).lower() == "yes")
+    if m:
+        data["prefetch_key"] = (m.group(1).lower() == "yes")
     m = re.search(r'^\s*qname-minimisation:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["qname_minimisation"] = (m.group(1).lower() == "yes")
+    if m:
+        data["qname_minimisation"] = (m.group(1).lower() == "yes")
     m = re.search(r'^\s*serve-expired:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["serve_expired"] = (m.group(1).lower() == "yes")
+    if m:
+        data["serve_expired"] = (m.group(1).lower() == "yes")
 
     m = re.search(r'^\s*cache-min-ttl:\s*(\d+)', content, re.MULTILINE)
-    if m: data["cache_min_ttl"] = int(m.group(1))
+    if m:
+        data["cache_min_ttl"] = int(m.group(1))
     m = re.search(r'^\s*cache-max-ttl:\s*(\d+)', content, re.MULTILINE)
-    if m: data["cache_max_ttl"] = int(m.group(1))
+    if m:
+        data["cache_max_ttl"] = int(m.group(1))
     m = re.search(r'^\s*serve-expired-ttl:\s*(\d+)', content, re.MULTILINE)
-    if m: data["serve_expired_ttl"] = int(m.group(1))
+    if m:
+        data["serve_expired_ttl"] = int(m.group(1))
 
     m = re.search(r'^\s*num-threads:\s*(\d+)', content, re.MULTILINE)
-    if m: data["num_threads"] = int(m.group(1))
+    if m:
+        data["num_threads"] = int(m.group(1))
     m = re.search(r'^\s*rrset-cache-size:\s*([^\s#]+)', content, re.MULTILINE)
-    if m: data["rrset_cache_size"] = m.group(1)
+    if m:
+        data["rrset_cache_size"] = m.group(1)
     m = re.search(r'^\s*msg-cache-size:\s*([^\s#]+)', content, re.MULTILINE)
-    if m: data["msg_cache_size"] = m.group(1)
+    if m:
+        data["msg_cache_size"] = m.group(1)
     m = re.search(r'^\s*so-reuseport:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["so_reuseport"] = (m.group(1).lower() == "yes")
+    if m:
+        data["so_reuseport"] = (m.group(1).lower() == "yes")
     m = re.search(r'^\s*edns-buffer-size:\s*(\d+)', content, re.MULTILINE)
-    if m: data["edns_buffer_size"] = int(m.group(1))
+    if m:
+        data["edns_buffer_size"] = int(m.group(1))
 
     m = re.search(r'^\s*verbosity:\s*(\d+)', content, re.MULTILINE)
-    if m: data["verbosity"] = int(m.group(1))
+    if m:
+        data["verbosity"] = int(m.group(1))
     m = re.search(r'^\s*log-queries:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["log_queries"] = (m.group(1).lower() == "yes")
+    if m:
+        data["log_queries"] = (m.group(1).lower() == "yes")
     m = re.search(r'^\s*log-replies:\s*(yes|no)', content, re.MULTILINE)
-    if m: data["log_replies"] = (m.group(1).lower() == "yes")
+    if m:
+        data["log_replies"] = (m.group(1).lower() == "yes")
 
     return data
 
@@ -1042,7 +1069,6 @@ def execute_tool_command(body):
         return {"success": False, "error": f"Action '{action}' tidak dikenal"}
 
 def trigger_system_update(update_type):
-    global active_tool_update
     if active_tool_update["running"]:
         return {"error": "Proses update sedang berjalan. Mohon tunggu hingga selesai."}, 409
 
@@ -1055,7 +1081,6 @@ def trigger_system_update(update_type):
 
     import threading
     def run_update_thread():
-        global active_tool_update
         active_tool_update["running"] = True
         active_tool_update["status"] = "running"
         active_tool_update["type"] = update_type
@@ -1109,9 +1134,9 @@ def trigger_system_update(update_type):
                 active_tool_update["pid"] = proc.pid
                 ret = proc.wait()
                 end_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                log_f.write(f"\n===========================================================\n")
+                log_f.write("\n===========================================================\n")
                 log_f.write(f"  Proses selesai pada: {end_ts} (Exit Code: {ret})\n")
-                log_f.write(f"===========================================================\n")
+                log_f.write("===========================================================\n")
                 active_tool_update["status"] = "finished" if ret == 0 else "failed"
             except Exception as ex:
                 log_f.write(f"\n[EXCEPTION] Gagal menjalankan update: {ex}\n")
@@ -1593,7 +1618,6 @@ def get_live_analytics():
 _metrics_prev = {}
 
 def get_system_metrics():
-    global _metrics_prev
     now = time.monotonic()
     result = {"cpu_percent": 0, "ram_used_mb": 0, "ram_total_mb": 0,
               "ram_percent": 0, "swap_used_mb": 0, "disk_used_gb": 0,
@@ -1640,24 +1664,29 @@ def get_system_metrics():
     try:
         with open("/proc/net/dev", "r", encoding="utf-8") as f:
             for line in f.readlines()[2:]:
-                if ":" not in line: continue
+                if ":" not in line:
+                    continue
                 name, data = line.split(":", 1)
                 name = name.strip()
-                if name == "lo": continue
+                if name == "lo":
+                    continue
                 # Prefer physical/device-backed NICs to avoid double-counting bridges.
                 if not os.path.exists(os.path.join("/sys/class/net", name, "device")):
                     continue
                 v = list(map(int, data.split()))
                 if len(v) >= 16:
-                    rx_b += v[0]; rx_p += v[1]; tx_b += v[8]; tx_p += v[9]
+                    rx_b += v[0]
+                    rx_p += v[1]
+                    tx_b += v[8]
+                    tx_p += v[9]
                     result["interfaces"].append(name)
         prev = _metrics_prev.get("net")
         if prev:
-            elapsed = max(now-prev[0], 0.001)
-            result["rx_mbps"] = round(max(0, rx_b-prev[1])*8/elapsed/1e6, 2)
-            result["tx_mbps"] = round(max(0, tx_b-prev[2])*8/elapsed/1e6, 2)
-            result["rx_pps"] = round(max(0, rx_p-prev[3])/elapsed)
-            result["tx_pps"] = round(max(0, tx_p-prev[4])/elapsed)
+            elapsed = max(now - prev[0], 0.001)
+            result["rx_mbps"] = round(max(0, rx_b - prev[1]) * 8 / elapsed / 1e6, 2)
+            result["tx_mbps"] = round(max(0, tx_b - prev[2]) * 8 / elapsed / 1e6, 2)
+            result["rx_pps"] = round(max(0, rx_p - prev[3]) / elapsed)
+            result["tx_pps"] = round(max(0, tx_p - prev[4]) / elapsed)
         _metrics_prev["net"] = (now, rx_b, tx_b, rx_p, tx_p)
     except Exception:
         pass
@@ -1669,8 +1698,11 @@ def get_system_metrics():
                 a = line.split()
                 if len(a) >= 14:
                     name = a[2]
-                    if name.startswith(("loop", "ram", "zram", "dm-")): continue
-                    read_sectors += int(a[5]); write_sectors += int(a[9]); io_ms += int(a[12])
+                    if name.startswith(("loop", "ram", "zram", "dm-")):
+                        continue
+                    read_sectors += int(a[5])
+                    write_sectors += int(a[9])
+                    io_ms += int(a[12])
         prev = _metrics_prev.get("disk")
         if prev:
             elapsed = max(now-prev[0], 0.001)
@@ -1873,7 +1905,7 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             return self._send_json({
                 "exists": file_exists,
                 "size_bytes": file_size,
-                "lines": [l.strip() for l in log_content.splitlines() if l.strip()]
+                "lines": [line_item.strip() for line_item in log_content.splitlines() if line_item.strip()]
             })
 
         elif path == "/api/tools/system-info":
@@ -2236,7 +2268,7 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             try:
                 if os.path.exists(log_path):
                     with open(log_path, "w", encoding="utf-8") as f:
-                        pass
+                        f.write("")
                 return self._send_json({"success": True, "message": "Query log berhasil dikosongkan."})
             except Exception as e:
                 return self._send_json({"error": f"Gagal menghapus query log: {e}"}, 500)
@@ -2263,7 +2295,6 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                 return self._send_json({"error": f"Failed to save sources: {e}"}, 500)
 
         elif path == "/api/blocklist/update":
-            global active_update_job
             if active_update_job["running"]:
                 return self._send_json({"error": "Blocklist update is already in progress."}, 409)
 
@@ -2273,7 +2304,6 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             try:
                 import threading
                 def run_updater():
-                    global active_update_job
                     active_update_job["running"] = True
                     active_update_job["start_time"] = time.time()
                     active_update_job["status"] = "running"
@@ -2357,11 +2387,11 @@ def run():
     host = APP_CONFIG.get("host", "0.0.0.0")
     server_address = (host, port)
     httpd = ThreadingHTTPServer(server_address, SmartDNSHandler)
-    print(f"==================================================")
-    print(f"  SmartDNS Management UI Server")
+    print("==================================================")
+    print("  SmartDNS Management UI Server")
     print(f"  Running on http://{host}:{port}")
     print(f"  Admin User: {APP_CONFIG.get('admin_username')}")
-    print(f"==================================================")
+    print("==================================================")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
