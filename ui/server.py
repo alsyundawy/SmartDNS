@@ -5,19 +5,19 @@ Server backend for managing dnsdist, blocklists, and services.
 Zero external dependencies - runs on Python 3.7+ standard library.
 """
 
-import os
-import sys
-import re
 import json
-import time
-import shutil
+import os
+import re
 import secrets
-import tempfile
+import shutil
 import subprocess
+import sys
+import tempfile
+import time
 from datetime import datetime
-from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
 # Base configuration paths
 DNSDIST_CONF = "/etc/dnsdist/dnsdist.conf"
@@ -68,10 +68,11 @@ active_tool_update = {
     "pid": None,
     "type": None,
     "status": "idle",
-    "start_time": 0
+    "start_time": 0,
 }
 
 SESSION_FILE = "/opt/smartdns-ui/sessions.json"
+
 
 def load_sessions():
     if os.path.exists(SESSION_FILE):
@@ -81,6 +82,7 @@ def load_sessions():
         except Exception:
             return set()
     return set()
+
 
 def save_sessions(sessions_set):
     try:
@@ -92,7 +94,9 @@ def save_sessions(sessions_set):
     except Exception:
         pass
 
+
 active_sessions = load_sessions()
+
 
 def get_dnsdist_web_password():
     # Read the current Web UI password from dnsdist's config file.
@@ -118,7 +122,7 @@ def load_app_config():
         # Authentication is checked against the live DNSDist config.
         "password_hash": "",
         "port": 5000,
-        "host": "0.0.0.0"
+        "host": "0.0.0.0",
     }
     if os.path.exists(CONFIG_FILE):
         try:
@@ -141,10 +145,12 @@ def load_app_config():
     default_config["password_hash"] = ""
     return default_config
 
+
 APP_CONFIG = load_app_config()
 
 cached_domain_count = {"count": 0, "mtime": 0}
 active_update_job = {"running": False, "pid": None, "start_time": 0, "status": "idle"}
+
 
 def get_blocklist_count():
     global cached_domain_count
@@ -164,6 +170,7 @@ def get_blocklist_count():
         print(f"[ERROR] Failed to count domains: {e}")
         return cached_domain_count.get("count", 0) if isinstance(cached_domain_count, dict) else 0
 
+
 def search_domains(query, limit=100):
     if not os.path.exists(DOMAINS_TXT) or not query.strip():
         return {
@@ -171,7 +178,7 @@ def search_domains(query, limit=100):
             "matches": [],
             "query": query,
             "total_found": 0,
-            "limit_reached": False
+            "limit_reached": False,
         }
 
     clean_query = query.strip()
@@ -184,7 +191,7 @@ def search_domains(query, limit=100):
         res_exact = subprocess.run(
             ["grep", "-Fxi", "-m", "1", "--", clean_query, DOMAINS_TXT],
             capture_output=True,
-            text=True
+            text=True,
         )
         if res_exact.returncode == 0 and res_exact.stdout.strip():
             exact_domain = res_exact.stdout.strip().splitlines()[0].strip()
@@ -193,14 +200,10 @@ def search_domains(query, limit=100):
         res_match = subprocess.run(
             ["grep", "-Fi", "-m", str(limit), "--", clean_query, DOMAINS_TXT],
             capture_output=True,
-            text=True
+            text=True,
         )
         if res_match.returncode == 0 and res_match.stdout:
-            matches = [
-                line.strip()
-                for line in res_match.stdout.splitlines()
-                if line.strip()
-            ]
+            matches = [line.strip() for line in res_match.stdout.splitlines() if line.strip()]
 
     except Exception as e:
         print(f"[ERROR] Domain search failed: {e}")
@@ -227,8 +230,9 @@ def search_domains(query, limit=100):
         "matches": ordered,
         "query": clean_query,
         "total_found": len(ordered),
-        "limit_reached": total_before_limit >= limit
+        "limit_reached": total_before_limit >= limit,
     }
+
 
 def get_netstat_services():
     services = []
@@ -264,7 +268,7 @@ def get_netstat_services():
                 foreign_addr = parts[4]
                 state = parts[5]
                 pid_prog = " ".join(parts[6:]) if len(parts) >= 7 else "-"
-            else: # udp
+            else:  # udp
                 recv_q = parts[1]
                 send_q = parts[2]
                 local_addr = parts[3]
@@ -276,7 +280,7 @@ def get_netstat_services():
             if ":" in local_addr:
                 colon_idx = local_addr.rfind(":")
                 ip = local_addr[:colon_idx]
-                port = local_addr[colon_idx+1:]
+                port = local_addr[colon_idx + 1 :]
             else:
                 ip = local_addr
                 port = "-"
@@ -291,22 +295,25 @@ def get_netstat_services():
             elif pid_prog != "-":
                 prog = pid_prog
 
-            services.append({
-                "proto": proto,
-                "recv_q": recv_q,
-                "send_q": send_q,
-                "local_addr": local_addr,
-                "ip": ip,
-                "port": port,
-                "foreign_addr": foreign_addr,
-                "state": state,
-                "pid": pid,
-                "program": prog,
-                "raw_pid_prog": pid_prog
-            })
+            services.append(
+                {
+                    "proto": proto,
+                    "recv_q": recv_q,
+                    "send_q": send_q,
+                    "local_addr": local_addr,
+                    "ip": ip,
+                    "port": port,
+                    "foreign_addr": foreign_addr,
+                    "state": state,
+                    "pid": pid,
+                    "program": prog,
+                    "raw_pid_prog": pid_prog,
+                }
+            )
         except Exception:
             continue
     return services
+
 
 def check_service_status(service_name):
     try:
@@ -315,6 +322,7 @@ def check_service_status(service_name):
     except Exception:
         return False
 
+
 def test_dnsdist_syntax(config_content):
     fd, tmp_path = tempfile.mkstemp(prefix="dnsdist_test_", suffix=".conf")
     try:
@@ -322,13 +330,14 @@ def test_dnsdist_syntax(config_content):
         safe_content = re.sub(
             r'(\b(?:password|apiKey|setKey)\s*=\s*)"[^"]*"',
             r'\1"__SYNTAX_CHECK__"',
-            config_content
+            config_content,
         )
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(safe_content)
         res = subprocess.run(
             ["dnsdist", "--check-config", f"--config={tmp_path}"],
-            capture_output=True, text=True
+            capture_output=True,
+            text=True,
         )
         is_ok = res.returncode == 0
         message = (res.stdout + "\n" + res.stderr).strip()
@@ -342,15 +351,13 @@ def test_dnsdist_syntax(config_content):
             except Exception:
                 pass
 
+
 def test_unbound_syntax(config_content):
     fd, tmp_path = tempfile.mkstemp(prefix="unbound_test_", suffix=".conf")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(config_content)
-        res = subprocess.run(
-            ["unbound-checkconf", tmp_path],
-            capture_output=True, text=True
-        )
+        res = subprocess.run(["unbound-checkconf", tmp_path], capture_output=True, text=True)
         is_ok = res.returncode == 0
         message = (res.stdout + "\n" + res.stderr).strip()
         return is_ok, message
@@ -362,6 +369,7 @@ def test_unbound_syntax(config_content):
                 os.remove(tmp_path)
             except Exception:
                 pass
+
 
 def sync_acl_to_unbound(final_acls):
     if not os.path.exists(UNBOUND_CONF):
@@ -406,6 +414,7 @@ def sync_acl_to_unbound(final_acls):
     except Exception as e:
         return False, str(e)
 
+
 def sync_acl_to_dnsdist(final_acls):
     if not os.path.exists(DNSDIST_CONF):
         return False, f"File {DNSDIST_CONF} tidak ditemukan"
@@ -413,18 +422,23 @@ def sync_acl_to_dnsdist(final_acls):
         with open(DNSDIST_CONF, "r", encoding="utf-8") as f:
             content = f.read()
 
-        acl_lines = ',\n    '.join([f'"{a}"' for a in final_acls])
-        acl_replacement = f'setACL({{\n    {acl_lines}\n}})'
-        pattern_acl = r'setACL\s*\(\s*\{[^}]*\}\s*\)'
+        acl_lines = ",\n    ".join([f'"{a}"' for a in final_acls])
+        acl_replacement = f"setACL({{\n    {acl_lines}\n}})"
+        pattern_acl = r"setACL\s*\(\s*\{[^}]*\}\s*\)"
         if re.search(pattern_acl, content):
             new_content = re.sub(pattern_acl, acl_replacement, content, count=1)
-            acl_comma_str = ','.join(final_acls)
+            acl_comma_str = ",".join(final_acls)
             idx_ws = new_content.find("setWebserverConfig(")
             if idx_ws != -1:
                 b_end = new_content.find(")", idx_ws)
                 if b_end != -1:
                     ws_block = new_content[idx_ws:b_end]
-                    ws_block = re.sub(r'(acl\s*=\s*)"[^"]*"', rf'\g<1>"{acl_comma_str}"', ws_block, count=1)
+                    ws_block = re.sub(
+                        r'(acl\s*=\s*)"[^"]*"',
+                        rf'\g<1>"{acl_comma_str}"',
+                        ws_block,
+                        count=1,
+                    )
                     new_content = new_content[:idx_ws] + ws_block + new_content[b_end:]
 
             is_ok, msg = test_dnsdist_syntax(new_content)
@@ -452,6 +466,7 @@ def sync_acl_to_dnsdist(final_acls):
     except Exception as e:
         return False, str(e)
 
+
 def parse_unbound_structured(content):
     data = {
         "port": 5300,
@@ -478,92 +493,93 @@ def parse_unbound_structured(content):
         "edns_buffer_size": 1232,
         "verbosity": 1,
         "log_queries": False,
-        "log_replies": False
+        "log_replies": False,
     }
 
-    m_port = re.search(r'^\s*port:\s*(\d+)', content, re.MULTILINE)
+    m_port = re.search(r"^\s*port:\s*(\d+)", content, re.MULTILINE)
     if m_port:
         data["port"] = int(m_port.group(1))
 
-    interfaces = re.findall(r'^\s*interface:\s*([^\s#]+)', content, re.MULTILINE)
+    interfaces = re.findall(r"^\s*interface:\s*([^\s#]+)", content, re.MULTILINE)
     data["interfaces"] = [i.strip() for i in interfaces if i.strip()]
 
-    m = re.search(r'^\s*do-ip4:\s*(yes|no)', content, re.MULTILINE)
+    m = re.search(r"^\s*do-ip4:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["do_ip4"] = (m.group(1).lower() == "yes")
-    m = re.search(r'^\s*do-ip6:\s*(yes|no)', content, re.MULTILINE)
+        data["do_ip4"] = m.group(1).lower() == "yes"
+    m = re.search(r"^\s*do-ip6:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["do_ip6"] = (m.group(1).lower() == "yes")
-    m = re.search(r'^\s*do-udp:\s*(yes|no)', content, re.MULTILINE)
+        data["do_ip6"] = m.group(1).lower() == "yes"
+    m = re.search(r"^\s*do-udp:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["do_udp"] = (m.group(1).lower() == "yes")
-    m = re.search(r'^\s*do-tcp:\s*(yes|no)', content, re.MULTILINE)
+        data["do_udp"] = m.group(1).lower() == "yes"
+    m = re.search(r"^\s*do-tcp:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["do_tcp"] = (m.group(1).lower() == "yes")
+        data["do_tcp"] = m.group(1).lower() == "yes"
 
-    acls = re.findall(r'^\s*access-control:\s*([^\s]+)\s+allow', content, re.MULTILINE)
+    acls = re.findall(r"^\s*access-control:\s*([^\s]+)\s+allow", content, re.MULTILINE)
     data["acl"] = [a.strip() for a in acls if a.strip()]
 
     insecure = re.findall(r'^\s*domain-insecure:\s*"?([^"\s#]+)"?', content, re.MULTILINE)
     data["domain_insecure"] = [d.strip() for d in insecure if d.strip()]
 
-    m = re.search(r'^\s*hide-identity:\s*(yes|no)', content, re.MULTILINE)
+    m = re.search(r"^\s*hide-identity:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["hide_identity"] = (m.group(1).lower() == "yes")
-    m = re.search(r'^\s*hide-version:\s*(yes|no)', content, re.MULTILINE)
+        data["hide_identity"] = m.group(1).lower() == "yes"
+    m = re.search(r"^\s*hide-version:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["hide_version"] = (m.group(1).lower() == "yes")
+        data["hide_version"] = m.group(1).lower() == "yes"
 
-    m = re.search(r'^\s*prefetch:\s*(yes|no)', content, re.MULTILINE)
+    m = re.search(r"^\s*prefetch:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["prefetch"] = (m.group(1).lower() == "yes")
-    m = re.search(r'^\s*prefetch-key:\s*(yes|no)', content, re.MULTILINE)
+        data["prefetch"] = m.group(1).lower() == "yes"
+    m = re.search(r"^\s*prefetch-key:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["prefetch_key"] = (m.group(1).lower() == "yes")
-    m = re.search(r'^\s*qname-minimisation:\s*(yes|no)', content, re.MULTILINE)
+        data["prefetch_key"] = m.group(1).lower() == "yes"
+    m = re.search(r"^\s*qname-minimisation:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["qname_minimisation"] = (m.group(1).lower() == "yes")
-    m = re.search(r'^\s*serve-expired:\s*(yes|no)', content, re.MULTILINE)
+        data["qname_minimisation"] = m.group(1).lower() == "yes"
+    m = re.search(r"^\s*serve-expired:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["serve_expired"] = (m.group(1).lower() == "yes")
+        data["serve_expired"] = m.group(1).lower() == "yes"
 
-    m = re.search(r'^\s*cache-min-ttl:\s*(\d+)', content, re.MULTILINE)
+    m = re.search(r"^\s*cache-min-ttl:\s*(\d+)", content, re.MULTILINE)
     if m:
         data["cache_min_ttl"] = int(m.group(1))
-    m = re.search(r'^\s*cache-max-ttl:\s*(\d+)', content, re.MULTILINE)
+    m = re.search(r"^\s*cache-max-ttl:\s*(\d+)", content, re.MULTILINE)
     if m:
         data["cache_max_ttl"] = int(m.group(1))
-    m = re.search(r'^\s*serve-expired-ttl:\s*(\d+)', content, re.MULTILINE)
+    m = re.search(r"^\s*serve-expired-ttl:\s*(\d+)", content, re.MULTILINE)
     if m:
         data["serve_expired_ttl"] = int(m.group(1))
 
-    m = re.search(r'^\s*num-threads:\s*(\d+)', content, re.MULTILINE)
+    m = re.search(r"^\s*num-threads:\s*(\d+)", content, re.MULTILINE)
     if m:
         data["num_threads"] = int(m.group(1))
-    m = re.search(r'^\s*rrset-cache-size:\s*([^\s#]+)', content, re.MULTILINE)
+    m = re.search(r"^\s*rrset-cache-size:\s*([^\s#]+)", content, re.MULTILINE)
     if m:
         data["rrset_cache_size"] = m.group(1)
-    m = re.search(r'^\s*msg-cache-size:\s*([^\s#]+)', content, re.MULTILINE)
+    m = re.search(r"^\s*msg-cache-size:\s*([^\s#]+)", content, re.MULTILINE)
     if m:
         data["msg_cache_size"] = m.group(1)
-    m = re.search(r'^\s*so-reuseport:\s*(yes|no)', content, re.MULTILINE)
+    m = re.search(r"^\s*so-reuseport:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["so_reuseport"] = (m.group(1).lower() == "yes")
-    m = re.search(r'^\s*edns-buffer-size:\s*(\d+)', content, re.MULTILINE)
+        data["so_reuseport"] = m.group(1).lower() == "yes"
+    m = re.search(r"^\s*edns-buffer-size:\s*(\d+)", content, re.MULTILINE)
     if m:
         data["edns_buffer_size"] = int(m.group(1))
 
-    m = re.search(r'^\s*verbosity:\s*(\d+)', content, re.MULTILINE)
+    m = re.search(r"^\s*verbosity:\s*(\d+)", content, re.MULTILINE)
     if m:
         data["verbosity"] = int(m.group(1))
-    m = re.search(r'^\s*log-queries:\s*(yes|no)', content, re.MULTILINE)
+    m = re.search(r"^\s*log-queries:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["log_queries"] = (m.group(1).lower() == "yes")
-    m = re.search(r'^\s*log-replies:\s*(yes|no)', content, re.MULTILINE)
+        data["log_queries"] = m.group(1).lower() == "yes"
+    m = re.search(r"^\s*log-replies:\s*(yes|no)", content, re.MULTILINE)
     if m:
-        data["log_replies"] = (m.group(1).lower() == "yes")
+        data["log_replies"] = m.group(1).lower() == "yes"
 
     return data
+
 
 def update_unbound_structured(content, new_data):
     if "acl" in new_data:
@@ -618,58 +634,126 @@ def update_unbound_structured(content, new_data):
         else:
             raise ValueError("Tidak dapat menemukan blok Domain Insecure di smartdns.conf")
 
-    for key, field in [("do_ip4", "do-ip4"), ("do_ip6", "do-ip6"), ("do_udp", "do-udp"), ("do_tcp", "do-tcp")]:
+    for key, field in [
+        ("do_ip4", "do-ip4"),
+        ("do_ip6", "do-ip6"),
+        ("do_udp", "do-udp"),
+        ("do_tcp", "do-tcp"),
+    ]:
         if key in new_data:
             val_str = "yes" if new_data[key] else "no"
-            content = re.sub(rf'(^\s*{field}:\s*)(yes|no)', rf'\g<1>{val_str}', content, flags=re.MULTILINE)
+            content = re.sub(
+                rf"(^\s*{field}:\s*)(yes|no)",
+                rf"\g<1>{val_str}",
+                content,
+                flags=re.MULTILINE,
+            )
 
     for key, field in [
         ("prefetch", "prefetch"),
         ("prefetch_key", "prefetch-key"),
         ("qname_minimisation", "qname-minimisation"),
-        ("serve_expired", "serve-expired")
+        ("serve_expired", "serve-expired"),
     ]:
         if key in new_data:
             val_str = "yes" if new_data[key] else "no"
-            content = re.sub(rf'(^\s*{field}:\s*)(yes|no)', rf'\g<1>{val_str}', content, flags=re.MULTILINE)
+            content = re.sub(
+                rf"(^\s*{field}:\s*)(yes|no)",
+                rf"\g<1>{val_str}",
+                content,
+                flags=re.MULTILINE,
+            )
 
     for key, field in [
         ("cache_min_ttl", "cache-min-ttl"),
         ("cache_max_ttl", "cache-max-ttl"),
-        ("serve_expired_ttl", "serve-expired-ttl")
+        ("serve_expired_ttl", "serve-expired-ttl"),
     ]:
         if key in new_data:
             val_int = int(new_data[key])
-            content = re.sub(rf'(^\s*{field}:\s*)\d+', rf'\g<1>{val_int}', content, flags=re.MULTILINE)
+            content = re.sub(
+                rf"(^\s*{field}:\s*)\d+",
+                rf"\g<1>{val_int}",
+                content,
+                flags=re.MULTILINE,
+            )
 
     if "num_threads" in new_data:
         threads = max(1, int(new_data["num_threads"]))
-        content = re.sub(r'(^\s*num-threads:\s*)\d+', rf'\g<1>{threads}', content, flags=re.MULTILINE)
-        content = re.sub(r'(^\s*rrset-cache-slabs:\s*)\d+', rf'\g<1>{threads}', content, flags=re.MULTILINE)
-        content = re.sub(r'(^\s*msg-cache-slabs:\s*)\d+', rf'\g<1>{threads}', content, flags=re.MULTILINE)
-        content = re.sub(r'(^\s*infra-cache-slabs:\s*)\d+', rf'\g<1>{threads}', content, flags=re.MULTILINE)
-        content = re.sub(r'(^\s*key-cache-slabs:\s*)\d+', rf'\g<1>{threads}', content, flags=re.MULTILINE)
+        content = re.sub(r"(^\s*num-threads:\s*)\d+", rf"\g<1>{threads}", content, flags=re.MULTILINE)
+        content = re.sub(
+            r"(^\s*rrset-cache-slabs:\s*)\d+",
+            rf"\g<1>{threads}",
+            content,
+            flags=re.MULTILINE,
+        )
+        content = re.sub(
+            r"(^\s*msg-cache-slabs:\s*)\d+",
+            rf"\g<1>{threads}",
+            content,
+            flags=re.MULTILINE,
+        )
+        content = re.sub(
+            r"(^\s*infra-cache-slabs:\s*)\d+",
+            rf"\g<1>{threads}",
+            content,
+            flags=re.MULTILINE,
+        )
+        content = re.sub(
+            r"(^\s*key-cache-slabs:\s*)\d+",
+            rf"\g<1>{threads}",
+            content,
+            flags=re.MULTILINE,
+        )
 
     if "rrset_cache_size" in new_data and str(new_data["rrset_cache_size"]).strip():
         size_str = str(new_data["rrset_cache_size"]).strip()
-        content = re.sub(r'(^\s*rrset-cache-size:\s*)[^\s#]+', rf'\g<1>{size_str}', content, flags=re.MULTILINE)
+        content = re.sub(
+            r"(^\s*rrset-cache-size:\s*)[^\s#]+",
+            rf"\g<1>{size_str}",
+            content,
+            flags=re.MULTILINE,
+        )
 
     if "msg_cache_size" in new_data and str(new_data["msg_cache_size"]).strip():
         size_str = str(new_data["msg_cache_size"]).strip()
-        content = re.sub(r'(^\s*msg-cache-size:\s*)[^\s#]+', rf'\g<1>{size_str}', content, flags=re.MULTILINE)
+        content = re.sub(
+            r"(^\s*msg-cache-size:\s*)[^\s#]+",
+            rf"\g<1>{size_str}",
+            content,
+            flags=re.MULTILINE,
+        )
 
     if "so_reuseport" in new_data:
         val_str = "yes" if new_data["so_reuseport"] else "no"
-        content = re.sub(r'(^\s*so-reuseport:\s*)(yes|no)', rf'\g<1>{val_str}', content, flags=re.MULTILINE)
+        content = re.sub(
+            r"(^\s*so-reuseport:\s*)(yes|no)",
+            rf"\g<1>{val_str}",
+            content,
+            flags=re.MULTILINE,
+        )
 
     if "edns_buffer_size" in new_data:
         val_int = int(new_data["edns_buffer_size"])
-        content = re.sub(r'(^\s*edns-buffer-size:\s*)\d+', rf'\g<1>{val_int}', content, flags=re.MULTILINE)
+        content = re.sub(
+            r"(^\s*edns-buffer-size:\s*)\d+",
+            rf"\g<1>{val_int}",
+            content,
+            flags=re.MULTILINE,
+        )
 
-    for key, field in [("hide_identity", "hide-identity"), ("hide_version", "hide-version")]:
+    for key, field in [
+        ("hide_identity", "hide-identity"),
+        ("hide_version", "hide-version"),
+    ]:
         if key in new_data:
             val_str = "yes" if new_data[key] else "no"
-            content = re.sub(rf'(^\s*{field}:\s*)(yes|no)', rf'\g<1>{val_str}', content, flags=re.MULTILINE)
+            content = re.sub(
+                rf"(^\s*{field}:\s*)(yes|no)",
+                rf"\g<1>{val_str}",
+                content,
+                flags=re.MULTILINE,
+            )
 
     if "verbosity" in new_data or "log_queries" in new_data or "log_replies" in new_data:
         v_int = int(new_data.get("verbosity", 1))
@@ -699,6 +783,7 @@ def get_dnsdist_console_key():
     except Exception:
         return ""
 
+
 def exec_dnsdist_console(command):
     key = get_dnsdist_console_key()
     if not key:
@@ -707,7 +792,9 @@ def exec_dnsdist_console(command):
     try:
         res = subprocess.run(
             ["dnsdist", "-k", key, "-e", command],
-            capture_output=True, text=True, timeout=5
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
 
         def clean_output(value):
@@ -716,7 +803,7 @@ def exec_dnsdist_console(command):
                 r"Passing a plain-text (?:password|API key).*?instead\.",
                 "",
                 value,
-                flags=re.IGNORECASE | re.DOTALL
+                flags=re.IGNORECASE | re.DOTALL,
             )
             return value.strip()
 
@@ -730,6 +817,7 @@ def exec_dnsdist_console(command):
     except Exception as e:
         return False, str(e)
 
+
 def get_server_ips():
     import subprocess
 
@@ -739,7 +827,10 @@ def get_server_ips():
     try:
         result = subprocess.run(
             ["ip", "-4", "route", "get", "1.1.1.1"],
-            capture_output=True, text=True, timeout=2, check=False
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
         )
         match = re.search(r"\bsrc\s+(\d{1,3}(?:\.\d{1,3}){3})", result.stdout)
         if match:
@@ -750,7 +841,10 @@ def get_server_ips():
     try:
         result = subprocess.run(
             ["ip", "-6", "route", "get", "2606:4700:4700::1111"],
-            capture_output=True, text=True, timeout=2, check=False
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
         )
         match = re.search(r"\bsrc\s+([0-9a-fA-F:]+)", result.stdout)
         if match:
@@ -787,10 +881,18 @@ def get_tools_system_info():
     git_branch = "main"
     if os.path.exists(os.path.join(SMARTDNS_DIR, ".git")):
         try:
-            r_c = subprocess.run(["git", "-C", SMARTDNS_DIR, "log", "-1", "--format=%h (%cr)"], capture_output=True, text=True)
+            r_c = subprocess.run(
+                ["git", "-C", SMARTDNS_DIR, "log", "-1", "--format=%h (%cr)"],
+                capture_output=True,
+                text=True,
+            )
             if r_c.returncode == 0:
                 git_commit = r_c.stdout.strip()
-            r_b = subprocess.run(["git", "-C", SMARTDNS_DIR, "branch", "--show-current"], capture_output=True, text=True)
+            r_b = subprocess.run(
+                ["git", "-C", SMARTDNS_DIR, "branch", "--show-current"],
+                capture_output=True,
+                text=True,
+            )
             if r_b.returncode == 0:
                 git_branch = r_b.stdout.strip()
         except Exception:
@@ -806,8 +908,9 @@ def get_tools_system_info():
         "dnsdist_active": check_service_status("dnsdist"),
         "git_commit": git_commit,
         "git_branch": git_branch,
-        "smartdns_home": SMARTDNS_DIR
+        "smartdns_home": SMARTDNS_DIR,
     }
+
 
 def execute_tool_command(body):
     action = body.get("action", "")
@@ -816,8 +919,19 @@ def execute_tool_command(body):
         domain = body.get("domain", "google.com").strip()
         if not domain:
             domain = "google.com"
-        if not re.fullmatch(r'^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.?$', domain) or ".." in domain or len(domain) > 253:
-            return {"success": False, "error": "Nama domain tidak valid (hanya alfanumerik, titik, dan strip).", "output": "Error: Invalid domain"}
+        if (
+            not re.fullmatch(
+                r"^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.?$",
+                domain,
+            )
+            or ".." in domain
+            or len(domain) > 253
+        ):
+            return {
+                "success": False,
+                "error": "Nama domain tidak valid (hanya alfanumerik, titik, dan strip).",
+                "output": "Error: Invalid domain",
+            }
 
         safe_domain = str(domain)
         target = body.get("target", "ipv4")
@@ -837,15 +951,33 @@ def execute_tool_command(body):
 
         if target == "all":
             targets = [
-                ("@127.0.0.1", "Frontend IPv4 (Port 53)", f"@127.0.0.1 {safe_domain} {safe_rtype}\n"),
-                ("@::1", "Frontend IPv6 (Port 53)", f"@::1 {safe_domain} {safe_rtype}\n"),
-                ("@127.0.0.1 -p 5300", "Recursive Unbound (Port 5300)", f"@127.0.0.1 -p 5300 {safe_domain} {safe_rtype}\n")
+                (
+                    "@127.0.0.1",
+                    "Frontend IPv4 (Port 53)",
+                    f"@127.0.0.1 {safe_domain} {safe_rtype}\n",
+                ),
+                (
+                    "@::1",
+                    "Frontend IPv6 (Port 53)",
+                    f"@::1 {safe_domain} {safe_rtype}\n",
+                ),
+                (
+                    "@127.0.0.1 -p 5300",
+                    "Recursive Unbound (Port 5300)",
+                    f"@127.0.0.1 -p 5300 {safe_domain} {safe_rtype}\n",
+                ),
             ]
             combined = []
             overall_success = True
             for s_addr, s_label, batch_in in targets:
                 try:
-                    res = subprocess.run(dig_cmd, input=batch_in, capture_output=True, text=True, timeout=8)
+                    res = subprocess.run(
+                        dig_cmd,
+                        input=batch_in,
+                        capture_output=True,
+                        text=True,
+                        timeout=8,
+                    )
                     out = (res.stdout + ("\n" + res.stderr if res.stderr else "")).strip()
                     status_str = "OK (Code 0)" if res.returncode == 0 else f"GAGAL (Code {res.returncode})"
                     cmd_label = f"dig {s_addr} {safe_domain} {safe_rtype}" + (" +short" if short else "")
@@ -858,10 +990,11 @@ def execute_tool_command(body):
                     overall_success = False
             return {
                 "success": overall_success,
-                "command": f"dig @127.0.0.1 & dig @::1 & dig @127.0.0.1 -p 5300 {safe_domain} {safe_rtype}" + (" +short" if short else ""),
+                "command": f"dig @127.0.0.1 & dig @::1 & dig @127.0.0.1 -p 5300 {safe_domain} {safe_rtype}"
+                + (" +short" if short else ""),
                 "description": f"Uji Semua Resolusi DNS untuk '{safe_domain}' ({safe_rtype})",
                 "output": "\n".join(combined),
-                "exit_code": 0 if overall_success else 1
+                "exit_code": 0 if overall_success else 1,
             }
 
         server_target = "@127.0.0.1"
@@ -884,12 +1017,22 @@ def execute_tool_command(body):
                 "description": desc,
                 "output": raw_out if raw_out else "[Tidak ada output dari server]",
                 "exit_code": res.returncode,
-                "elapsed_ms": elapsed_ms
+                "elapsed_ms": elapsed_ms,
             }
         except subprocess.TimeoutExpired:
-            return {"success": False, "command": desc, "error": "Perintah dig timeout (lebih dari 12 detik).", "output": "Timeout: No response from DNS server"}
+            return {
+                "success": False,
+                "command": desc,
+                "error": "Perintah dig timeout (lebih dari 12 detik).",
+                "output": "Timeout: No response from DNS server",
+            }
         except Exception as e:
-            return {"success": False, "command": desc, "error": str(e), "output": str(e)}
+            return {
+                "success": False,
+                "command": desc,
+                "error": str(e),
+                "output": str(e),
+            }
 
     elif action == "checkconf":
         component = body.get("component", "unbound")
@@ -903,10 +1046,15 @@ def execute_tool_command(body):
                     "command": "unbound-checkconf",
                     "description": "Pengecekan sintaks konfigurasi Unbound (/etc/unbound/unbound.conf)",
                     "output": out if out else "unbound-checkconf: no errors",
-                    "exit_code": res.returncode
+                    "exit_code": res.returncode,
                 }
             except Exception as e:
-                return {"success": False, "command": "unbound-checkconf", "output": str(e), "error": str(e)}
+                return {
+                    "success": False,
+                    "command": "unbound-checkconf",
+                    "output": str(e),
+                    "error": str(e),
+                }
 
         elif component == "dnsdist":
             cmd = ["dnsdist", "--check-config"]
@@ -918,49 +1066,71 @@ def execute_tool_command(body):
                     "Passing a plain-text API key via the 'apiKey' parameter",
                 )
                 out = "\n".join(
-                    line for line in out.splitlines()
-                    if not any(warning in line for warning in warnings)
+                    line for line in out.splitlines() if not any(warning in line for warning in warnings)
                 ).strip()
                 return {
                     "success": (res.returncode == 0),
                     "command": "dnsdist --check-config",
                     "description": "Pengecekan sintaks konfigurasi dnsdist (/etc/dnsdist/dnsdist.conf)",
                     "output": out if out else "Configuration '/etc/dnsdist/dnsdist.conf' OK!",
-                    "exit_code": res.returncode
+                    "exit_code": res.returncode,
                 }
             except Exception as e:
-                return {"success": False, "command": "dnsdist --check-config", "output": str(e), "error": str(e)}
+                return {
+                    "success": False,
+                    "command": "dnsdist --check-config",
+                    "output": str(e),
+                    "error": str(e),
+                }
 
         elif component == "both":
             r1 = subprocess.run(["unbound-checkconf"], capture_output=True, text=True, timeout=10)
-            r2 = subprocess.run(["dnsdist", "--check-config"], capture_output=True, text=True, timeout=10)
+            r2 = subprocess.run(
+                ["dnsdist", "--check-config"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
             out = f"--- [1/2] UNBOUND CHECKCONF ---\n{(r1.stdout + chr(10) + r1.stderr).strip() or 'OK'}\n\n--- [2/2] DNSDIST CHECK-CONFIG ---\n{(r2.stdout + chr(10) + r2.stderr).strip() or 'OK'}"
             return {
                 "success": (r1.returncode == 0 and r2.returncode == 0),
                 "command": "unbound-checkconf && dnsdist --check-config",
                 "description": "Pengecekan sintaks lengkap Unbound dan dnsdist",
                 "output": out,
-                "exit_code": max(r1.returncode, r2.returncode)
+                "exit_code": max(r1.returncode, r2.returncode),
             }
         else:
-            return {"success": False, "error": f"Komponen checkconf '{component}' tidak valid"}
+            return {
+                "success": False,
+                "error": f"Komponen checkconf '{component}' tidak valid",
+            }
 
     elif action == "service_status":
         service = body.get("service", "unbound")
         if service not in ["unbound", "dnsdist"]:
             return {"success": False, "error": f"Service '{service}' tidak diizinkan."}
         try:
-            res = subprocess.run(["systemctl", "status", service, "--no-pager", "-n", "30"], capture_output=True, text=True, timeout=10)
+            res = subprocess.run(
+                ["systemctl", "status", service, "--no-pager", "-n", "30"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
             out = (res.stdout + "\n" + res.stderr).strip()
             return {
                 "success": (res.returncode == 0 or "active (running)" in out),
                 "command": f"systemctl status {service}",
                 "description": f"Status service {service}",
                 "output": out,
-                "exit_code": res.returncode
+                "exit_code": res.returncode,
             }
         except Exception as e:
-            return {"success": False, "command": f"systemctl status {service}", "output": str(e), "error": str(e)}
+            return {
+                "success": False,
+                "command": f"systemctl status {service}",
+                "output": str(e),
+                "error": str(e),
+            }
 
     elif action == "service_restart":
         service = body.get("service", "unbound")
@@ -969,37 +1139,77 @@ def execute_tool_command(body):
         try:
             if service == "both":
                 cmd_str = "systemctl restart unbound && systemctl restart dnsdist"
-                r1 = subprocess.run(["systemctl", "restart", "unbound"], capture_output=True, text=True, timeout=15)
-                r2 = subprocess.run(["systemctl", "restart", "dnsdist"], capture_output=True, text=True, timeout=15)
-                s1 = subprocess.run(["systemctl", "status", "unbound", "--no-pager", "-n", "5"], capture_output=True, text=True, timeout=5)
-                s2 = subprocess.run(["systemctl", "status", "dnsdist", "--no-pager", "-n", "5"], capture_output=True, text=True, timeout=5)
-                out = f"Restart Unbound: {'SUKSES' if r1.returncode==0 else 'GAGAL ('+r1.stderr+')'}\n{s1.stdout}\n\nRestart DNSDist: {'SUKSES' if r2.returncode==0 else 'GAGAL ('+r2.stderr+')'}\n{s2.stdout}"
+                r1 = subprocess.run(
+                    ["systemctl", "restart", "unbound"],
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                )
+                r2 = subprocess.run(
+                    ["systemctl", "restart", "dnsdist"],
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                )
+                s1 = subprocess.run(
+                    ["systemctl", "status", "unbound", "--no-pager", "-n", "5"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                s2 = subprocess.run(
+                    ["systemctl", "status", "dnsdist", "--no-pager", "-n", "5"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                out = f"Restart Unbound: {'SUKSES' if r1.returncode == 0 else 'GAGAL (' + r1.stderr + ')'}\n{s1.stdout}\n\nRestart DNSDist: {'SUKSES' if r2.returncode == 0 else 'GAGAL (' + r2.stderr + ')'}\n{s2.stdout}"
                 return {
                     "success": (r1.returncode == 0 and r2.returncode == 0),
                     "command": cmd_str,
                     "description": "Restart service Unbound & DNSDist",
                     "output": out,
-                    "exit_code": max(r1.returncode, r2.returncode)
+                    "exit_code": max(r1.returncode, r2.returncode),
                 }
             else:
                 cmd_str = f"systemctl restart {service}"
-                r = subprocess.run(["systemctl", "restart", service], capture_output=True, text=True, timeout=15)
-                s = subprocess.run(["systemctl", "status", service, "--no-pager", "-n", "10"], capture_output=True, text=True, timeout=5)
-                out = f"Restart {service}: {'SUKSES' if r.returncode==0 else 'GAGAL'}\n\n{s.stdout}"
+                r = subprocess.run(
+                    ["systemctl", "restart", service],
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                )
+                s = subprocess.run(
+                    ["systemctl", "status", service, "--no-pager", "-n", "10"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                out = f"Restart {service}: {'SUKSES' if r.returncode == 0 else 'GAGAL'}\n\n{s.stdout}"
                 return {
                     "success": (r.returncode == 0),
                     "command": cmd_str,
                     "description": f"Restart service {service}",
                     "output": out,
-                    "exit_code": r.returncode
+                    "exit_code": r.returncode,
                 }
         except Exception as e:
-            return {"success": False, "command": f"systemctl restart {service}", "output": str(e), "error": str(e)}
+            return {
+                "success": False,
+                "command": f"systemctl restart {service}",
+                "output": str(e),
+                "error": str(e),
+            }
 
     elif action == "heartbeat":
         try:
             heartbeat_cmd = "sed '/sleep/d' /usr/local/bin/smartdns-heartbeat | bash"
-            res = subprocess.run(["bash", "-c", heartbeat_cmd], capture_output=True, text=True, timeout=25)
+            res = subprocess.run(
+                ["bash", "-c", heartbeat_cmd],
+                capture_output=True,
+                text=True,
+                timeout=25,
+            )
             out = (res.stdout + "\n" + res.stderr).strip()
 
             meta = ""
@@ -1012,7 +1222,7 @@ def execute_tool_command(body):
                     with open(INSTALL_ENV, "r", encoding="utf-8") as f:
                         for line in f:
                             if line.startswith("SMARTDNS_TELEMETRY_URL="):
-                                telemetry_url = line.strip().split("=", 1)[1].strip('"\'')
+                                telemetry_url = line.strip().split("=", 1)[1].strip("\"'")
                 except Exception:
                     pass
 
@@ -1028,15 +1238,24 @@ def execute_tool_command(body):
                 "command": "/usr/local/bin/smartdns-heartbeat",
                 "description": "Manual Heartbeat & Telemetry Registration",
                 "output": full_out,
-                "exit_code": res.returncode
+                "exit_code": res.returncode,
             }
         except Exception as e:
-            return {"success": False, "command": "/usr/local/bin/smartdns-heartbeat", "output": str(e), "error": str(e)}
+            return {
+                "success": False,
+                "command": "/usr/local/bin/smartdns-heartbeat",
+                "output": str(e),
+                "error": str(e),
+            }
 
     elif action == "metadata":
         try:
             if not os.path.exists(INSTALL_JSON):
-                return {"success": False, "command": f"cat {INSTALL_JSON}", "output": f"File {INSTALL_JSON} tidak ditemukan."}
+                return {
+                    "success": False,
+                    "command": f"cat {INSTALL_JSON}",
+                    "output": f"File {INSTALL_JSON} tidak ditemukan.",
+                }
             with open(INSTALL_JSON, "r", encoding="utf-8") as f:
                 content = f.read()
             return {
@@ -1044,15 +1263,24 @@ def execute_tool_command(body):
                 "command": f"cat {INSTALL_JSON}",
                 "description": "Installation Metadata (UUID & Version)",
                 "output": content,
-                "exit_code": 0
+                "exit_code": 0,
             }
         except Exception as e:
-            return {"success": False, "command": f"cat {INSTALL_JSON}", "output": str(e), "error": str(e)}
+            return {
+                "success": False,
+                "command": f"cat {INSTALL_JSON}",
+                "output": str(e),
+                "error": str(e),
+            }
 
     elif action == "install_env":
         try:
             if not os.path.exists(INSTALL_ENV):
-                return {"success": False, "command": f"cat {INSTALL_ENV}", "output": f"File {INSTALL_ENV} tidak ditemukan."}
+                return {
+                    "success": False,
+                    "command": f"cat {INSTALL_ENV}",
+                    "output": f"File {INSTALL_ENV} tidak ditemukan.",
+                }
             with open(INSTALL_ENV, "r", encoding="utf-8") as f:
                 content = f.read()
             return {
@@ -1060,13 +1288,19 @@ def execute_tool_command(body):
                 "command": f"cat {INSTALL_ENV}",
                 "description": "Installation Path & Environment (/var/lib/smartdns/install.env)",
                 "output": content,
-                "exit_code": 0
+                "exit_code": 0,
             }
         except Exception as e:
-            return {"success": False, "command": f"cat {INSTALL_ENV}", "output": str(e), "error": str(e)}
+            return {
+                "success": False,
+                "command": f"cat {INSTALL_ENV}",
+                "output": str(e),
+                "error": str(e),
+            }
 
     else:
         return {"success": False, "error": f"Action '{action}' tidak dikenal"}
+
 
 def trigger_system_update(update_type):
     if active_tool_update["running"]:
@@ -1080,6 +1314,7 @@ def trigger_system_update(update_type):
         return {"error": f"Tipe update '{update_type}' tidak valid."}, 400
 
     import threading
+
     def run_update_thread():
         active_tool_update["running"] = True
         active_tool_update["status"] = "running"
@@ -1106,12 +1341,20 @@ def trigger_system_update(update_type):
                     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
                     if os.path.exists(DNSDIST_CONF):
                         shutil.copy2(DNSDIST_CONF, f"{DNSDIST_CONF}.bak_forceupdate_{ts}")
-                        log_f.write(f">>> [BACKUP] /etc/dnsdist/dnsdist.conf berhasil dibackup ke .bak_forceupdate_{ts}\n")
+                        log_f.write(
+                            f">>> [BACKUP] /etc/dnsdist/dnsdist.conf berhasil dibackup ke .bak_forceupdate_{ts}\n"
+                        )
                 except Exception as b_err:
                     log_f.write(f">>> [WARN] Gagal backup dnsdist.conf: {b_err}\n")
-                log_f.write(f">>> Menjalankan: cd {SMARTDNS_DIR} && git fetch origin && git reset --hard origin/main && yes \"\" | bash install.sh\n\n")
+                log_f.write(
+                    f'>>> Menjalankan: cd {SMARTDNS_DIR} && git fetch origin && git reset --hard origin/main && yes "" | bash install.sh\n\n'
+                )
                 log_f.flush()
-                cmd_args = ["bash", "-c", f"cd '{SMARTDNS_DIR}' && git fetch origin && git reset --hard origin/main && yes '' | bash install.sh"]
+                cmd_args = [
+                    "bash",
+                    "-c",
+                    f"cd '{SMARTDNS_DIR}' && git fetch origin && git reset --hard origin/main && yes '' | bash install.sh",
+                ]
             elif update_type == "standard":
                 try:
                     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1119,9 +1362,13 @@ def trigger_system_update(update_type):
                         shutil.copy2(DNSDIST_CONF, f"{DNSDIST_CONF}.bak_standardupdate_{ts}")
                 except Exception:
                     pass
-                log_f.write(f">>> Menjalankan: cd {SMARTDNS_DIR} && git pull && yes \"\" | bash install.sh\n\n")
+                log_f.write(f'>>> Menjalankan: cd {SMARTDNS_DIR} && git pull && yes "" | bash install.sh\n\n')
                 log_f.flush()
-                cmd_args = ["bash", "-c", f"cd '{SMARTDNS_DIR}' && git pull && yes '' | bash install.sh"]
+                cmd_args = [
+                    "bash",
+                    "-c",
+                    f"cd '{SMARTDNS_DIR}' && git pull && yes '' | bash install.sh",
+                ]
 
             try:
                 proc = subprocess.Popen(
@@ -1129,7 +1376,7 @@ def trigger_system_update(update_type):
                     shell=False,
                     stdout=log_f,
                     stderr=subprocess.STDOUT,
-                    cwd=SMARTDNS_DIR
+                    cwd=SMARTDNS_DIR,
                 )
                 active_tool_update["pid"] = proc.pid
                 ret = proc.wait()
@@ -1146,7 +1393,11 @@ def trigger_system_update(update_type):
 
     t = threading.Thread(target=run_update_thread, daemon=True)
     t.start()
-    return {"success": True, "message": f"Proses pembaruan '{update_type}' telah dimulai di latar belakang."}, 200
+    return {
+        "success": True,
+        "message": f"Proses pembaruan '{update_type}' telah dimulai di latar belakang.",
+    }, 200
+
 
 def parse_dnsdist_structured(content):
     data = {
@@ -1160,8 +1411,13 @@ def parse_dnsdist_structured(content):
         "server_policy": "leastOutstanding",
         "upstream_servers": [],
         "custom_dns": [],
-        "safesearch": {"google": False, "bing": False, "youtube": False, "duckduckgo": False},
-        "query_logging": False
+        "safesearch": {
+            "google": False,
+            "bing": False,
+            "youtube": False,
+            "duckduckgo": False,
+        },
+        "query_logging": False,
     }
 
     # 1. Parse Block AAAA (IPv6 Spoof)
@@ -1220,16 +1476,19 @@ def parse_dnsdist_structured(content):
                 data["web_access_value"] = m_pw.group(1)
 
     # 6. Parse Rate Limit
-    m_rl = re.search(r'addAction\s*\(\s*MaxQPSIPRule\s*\(\s*(\d+)\s*\)\s*,\s*(\w+)\s*\([^)]*\)\s*\)', content)
+    m_rl = re.search(
+        r"addAction\s*\(\s*MaxQPSIPRule\s*\(\s*(\d+)\s*\)\s*,\s*(\w+)\s*\([^)]*\)\s*\)",
+        content,
+    )
     if m_rl:
         data["rate_limit"] = {
             "enabled": True,
             "qps": int(m_rl.group(1)),
-            "action": m_rl.group(2)
+            "action": m_rl.group(2),
         }
 
     # 7. Parse Server Policy & Upstreams
-    m_pol = re.search(r'setServerPolicy\s*\(\s*(\w+)\s*\)', content)
+    m_pol = re.search(r"setServerPolicy\s*\(\s*(\w+)\s*\)", content)
     if m_pol:
         data["server_policy"] = m_pol.group(1)
 
@@ -1245,14 +1504,16 @@ def parse_dnsdist_structured(content):
             m_addr = re.search(r'address\s*=\s*"([^"]+)"', sb)
             m_name = re.search(r'name\s*=\s*"([^"]+)"', sb)
             m_chk = re.search(r'checkName\s*=\s*"([^"]+)"', sb)
-            m_to = re.search(r'timeout\s*=\s*(\d+)', sb)
+            m_to = re.search(r"timeout\s*=\s*(\d+)", sb)
             if m_addr:
-                data["upstream_servers"].append({
-                    "name": m_name.group(1) if m_name else "",
-                    "address": m_addr.group(1),
-                    "checkName": m_chk.group(1) if m_chk else "",
-                    "timeout": int(m_to.group(1)) if m_to else 2
-                })
+                data["upstream_servers"].append(
+                    {
+                        "name": m_name.group(1) if m_name else "",
+                        "address": m_addr.group(1),
+                        "checkName": m_chk.group(1) if m_chk else "",
+                        "timeout": int(m_to.group(1)) if m_to else 2,
+                    }
+                )
             idx_srv = b_close + 1
         else:
             break
@@ -1265,16 +1526,19 @@ def parse_dnsdist_structured(content):
         end_cust = min(end_pos) if end_pos else len(content)
         cust_section = content[idx_cust:end_cust]
         for line in cust_section.splitlines():
-            m_cust = re.search(r'addAction\s*\(\s*"([^"]+)"\s*,\s*SpoofAction\s*\(\s*\{?"([^"}]+)"\}?\s*\)\s*\)', line)
+            m_cust = re.search(
+                r'addAction\s*\(\s*"([^"]+)"\s*,\s*SpoofAction\s*\(\s*\{?"([^"}]+)"\}?\s*\)\s*\)',
+                line,
+            )
             if m_cust:
                 data["custom_dns"].append({"domain": m_cust.group(1), "ip": m_cust.group(2)})
 
     # 9. Parse SafeSearch
     data["safesearch"] = {
-        "google": bool(re.search(r'googleSafeSMN', content)),
-        "bing": bool(re.search(r'bingSafeSMN', content)),
-        "youtube": bool(re.search(r'ytSafeSMN', content)),
-        "duckduckgo": bool(re.search(r'ddgSafeSMN', content))
+        "google": bool(re.search(r"googleSafeSMN", content)),
+        "bing": bool(re.search(r"bingSafeSMN", content)),
+        "youtube": bool(re.search(r"ytSafeSMN", content)),
+        "duckduckgo": bool(re.search(r"ddgSafeSMN", content)),
     }
 
     # 10. Query Logging
@@ -1297,7 +1561,7 @@ def update_dnsdist_structured(content, new_data):
                 b_open = content.find("{", idx_sp6)
                 b_close = content.find("}", b_open)
                 if b_open != -1 and b_close != -1:
-                    content = content[:b_open] + formatted_v6 + content[b_close + 1:]
+                    content = content[:b_open] + formatted_v6 + content[b_close + 1 :]
         else:
             raise ValueError("Tidak dapat menemukan blok aturan Block AAAA (SpoofAction IPv6) di config")
 
@@ -1316,7 +1580,7 @@ def update_dnsdist_structured(content, new_data):
                 b_open = content.find("{", idx_sp4)
                 b_close = content.find("}", b_open)
                 if b_open != -1 and b_close != -1:
-                    content = content[:b_open] + formatted_v4 + content[b_close + 1:]
+                    content = content[:b_open] + formatted_v4 + content[b_close + 1 :]
         else:
             raise ValueError("Tidak dapat menemukan blok aturan Block A (SpoofAction IPv4) di config")
 
@@ -1339,7 +1603,11 @@ def update_dnsdist_structured(content, new_data):
         if idx_wl != -1:
             idx_next = content.find("addAction(SuffixMatchNodeRule(whitelistSMN)", idx_wl)
             if idx_next != -1:
-                content = content[:idx_wl] + f"local whitelistSMN = newSuffixMatchNode()\n\n{wl_block_replacement}\n\n" + content[idx_next:]
+                content = (
+                    content[:idx_wl]
+                    + f"local whitelistSMN = newSuffixMatchNode()\n\n{wl_block_replacement}\n\n"
+                    + content[idx_next:]
+                )
         else:
             raise ValueError("Tidak dapat menemukan blok Whitelist (whitelistSMN) di config")
 
@@ -1351,14 +1619,14 @@ def update_dnsdist_structured(content, new_data):
             if a not in final_acls:
                 final_acls.append(a)
 
-        acl_lines = ',\n    '.join([f'"{a}"' for a in final_acls])
-        acl_replacement = f'setACL({{\n    {acl_lines}\n}})'
+        acl_lines = ",\n    ".join([f'"{a}"' for a in final_acls])
+        acl_replacement = f"setACL({{\n    {acl_lines}\n}})"
 
         idx_acl = content.find("setACL(")
         if idx_acl != -1:
             b_close = content.find(")", idx_acl)
             if b_close != -1:
-                content = content[:idx_acl] + acl_replacement + content[b_close + 1:]
+                content = content[:idx_acl] + acl_replacement + content[b_close + 1 :]
         else:
             raise ValueError("Tidak dapat menemukan blok setACL di config")
 
@@ -1368,8 +1636,13 @@ def update_dnsdist_structured(content, new_data):
             b_end = content.find(")", idx_ws)
             if b_end != -1:
                 ws_block = content[idx_ws:b_end]
-                acl_comma_str = ','.join(final_acls)
-                ws_block = re.sub(r'(acl\s*=\s*)"[^"]*"', rf'\g<1>"{acl_comma_str}"', ws_block, count=1)
+                acl_comma_str = ",".join(final_acls)
+                ws_block = re.sub(
+                    r'(acl\s*=\s*)"[^"]*"',
+                    rf'\g<1>"{acl_comma_str}"',
+                    ws_block,
+                    count=1,
+                )
                 content = content[:idx_ws] + ws_block + content[b_end:]
 
     # 5. Update Webserver Access Credential
@@ -1405,7 +1678,11 @@ def update_dnsdist_structured(content, new_data):
         if idx_rl != -1:
             idx_fwd = content.find("-- Forward Normal DNS", idx_rl)
             if idx_fwd != -1:
-                sep_line = content.rfind("----------------------------------------------------", idx_rl, idx_fwd)
+                sep_line = content.rfind(
+                    "----------------------------------------------------",
+                    idx_rl,
+                    idx_fwd,
+                )
                 if sep_line == -1:
                     sep_line = idx_fwd
                 new_rl_sec = f"-- Rate Limit\n----------------------------------------------------\n{rl_code}\n\n"
@@ -1428,15 +1705,26 @@ def update_dnsdist_structured(content, new_data):
                 if chk:
                     if not chk.endswith("."):
                         chk += "."
-                    props.extend([f'checkName="{chk}"', 'mustResolve=true', f'timeout={to}', 'checkInterval=10'])
-                srv_lines.append('newServer({\n    ' + ',\n    '.join(props) + '\n})')
+                    props.extend(
+                        [
+                            f'checkName="{chk}"',
+                            "mustResolve=true",
+                            f"timeout={to}",
+                            "checkInterval=10",
+                        ]
+                    )
+                srv_lines.append("newServer({\n    " + ",\n    ".join(props) + "\n})")
 
-            srv_block = '\n\n'.join(srv_lines) + f'\n\nsetServerPolicy({policy})'
+            srv_block = "\n\n".join(srv_lines) + f"\n\nsetServerPolicy({policy})"
             idx_bk = content.find("-- Backend")
             if idx_bk != -1:
                 idx_pc = content.find("-- Packet Cache", idx_bk)
                 if idx_pc != -1:
-                    sep_line = content.rfind("----------------------------------------------------", idx_bk, idx_pc)
+                    sep_line = content.rfind(
+                        "----------------------------------------------------",
+                        idx_bk,
+                        idx_pc,
+                    )
                     if sep_line == -1:
                         sep_line = idx_pc
                     new_bk_sec = f"-- Backend\n----------------------------------------------------\n{srv_block}\n\n"
@@ -1479,29 +1767,29 @@ def update_dnsdist_structured(content, new_data):
         ss = new_data["safesearch"]
         ss_blocks = []
         if ss.get("google"):
-            ss_blocks.append('''local googleSafeSMN = newSuffixMatchNode()
+            ss_blocks.append("""local googleSafeSMN = newSuffixMatchNode()
 googleSafeSMN:add(newDNSName("google.com."))
 googleSafeSMN:add(newDNSName("google.co.id."))
 googleSafeSMN:add(newDNSName("www.google.com."))
 googleSafeSMN:add(newDNSName("www.google.co.id."))
 addAction(AndRule({SuffixMatchNodeRule(googleSafeSMN), QTypeRule(DNSQType.A)}), SpoofAction("216.239.38.120"))
-addAction(AndRule({SuffixMatchNodeRule(googleSafeSMN), QTypeRule(DNSQType.AAAA)}), SpoofAction("2001:4860:4806::78"))''')
+addAction(AndRule({SuffixMatchNodeRule(googleSafeSMN), QTypeRule(DNSQType.AAAA)}), SpoofAction("2001:4860:4806::78"))""")
         if ss.get("bing"):
-            ss_blocks.append('''local bingSafeSMN = newSuffixMatchNode()
+            ss_blocks.append("""local bingSafeSMN = newSuffixMatchNode()
 bingSafeSMN:add(newDNSName("bing.com."))
 bingSafeSMN:add(newDNSName("www.bing.com."))
-addAction(AndRule({SuffixMatchNodeRule(bingSafeSMN), QTypeRule(DNSQType.A)}), SpoofAction("204.79.197.220"))''')
+addAction(AndRule({SuffixMatchNodeRule(bingSafeSMN), QTypeRule(DNSQType.A)}), SpoofAction("204.79.197.220"))""")
         if ss.get("youtube"):
-            ss_blocks.append('''local ytSafeSMN = newSuffixMatchNode()
+            ss_blocks.append("""local ytSafeSMN = newSuffixMatchNode()
 ytSafeSMN:add(newDNSName("youtube.com."))
 ytSafeSMN:add(newDNSName("www.youtube.com."))
 ytSafeSMN:add(newDNSName("m.youtube.com."))
 ytSafeSMN:add(newDNSName("youtubei.googleapis.com."))
-addAction(AndRule({SuffixMatchNodeRule(ytSafeSMN), QTypeRule(DNSQType.A)}), SpoofAction("216.239.38.120"))''')
+addAction(AndRule({SuffixMatchNodeRule(ytSafeSMN), QTypeRule(DNSQType.A)}), SpoofAction("216.239.38.120"))""")
         if ss.get("duckduckgo"):
-            ss_blocks.append('''local ddgSafeSMN = newSuffixMatchNode()
+            ss_blocks.append("""local ddgSafeSMN = newSuffixMatchNode()
 ddgSafeSMN:add(newDNSName("duckduckgo.com."))
-addAction(AndRule({SuffixMatchNodeRule(ddgSafeSMN), QTypeRule(DNSQType.A)}), SpoofAction("52.142.124.215"))''')
+addAction(AndRule({SuffixMatchNodeRule(ddgSafeSMN), QTypeRule(DNSQType.A)}), SpoofAction("52.142.124.215"))""")
 
         ss_content = "\n\n".join(ss_blocks)
         header_ss = "----------------------------------------------------\n-- SafeSearch Enforcement\n----------------------------------------------------"
@@ -1510,7 +1798,11 @@ addAction(AndRule({SuffixMatchNodeRule(ddgSafeSMN), QTypeRule(DNSQType.A)}), Spo
         if idx_ss != -1:
             idx_aaaa = content.find("-- Block AAAA", idx_ss)
             if idx_aaaa != -1:
-                sep_line = content.rfind("----------------------------------------------------", idx_ss, idx_aaaa)
+                sep_line = content.rfind(
+                    "----------------------------------------------------",
+                    idx_ss,
+                    idx_aaaa,
+                )
                 if sep_line == -1:
                     sep_line = idx_aaaa
                 new_ss_sec = f"{header_ss}\n\n{ss_content}\n\n"
@@ -1526,7 +1818,7 @@ addAction(AndRule({SuffixMatchNodeRule(ddgSafeSMN), QTypeRule(DNSQType.A)}), Spo
     # 10. Update Query Log
     if "query_logging" in new_data:
         ql = new_data["query_logging"]
-        ql_code = 'addAction(AllRule(), LogAction("/var/log/dnsdist_queries.log", false, false, false))' if ql else ''
+        ql_code = 'addAction(AllRule(), LogAction("/var/log/dnsdist_queries.log", false, false, false))' if ql else ""
         idx_ql = content.find("-- Query Log")
         if idx_ql != -1:
             new_ql_sec = f"-- Query Log\n----------------------------------------------------\n{ql_code}\n"
@@ -1541,7 +1833,7 @@ def get_live_analytics():
         "stats": {},
         "servers": [],
         "top_queries": [],
-        "top_responses": []
+        "top_responses": [],
     }
     # 1. dumpStats
     ok, out = exec_dnsdist_console("dumpStats()")
@@ -1550,11 +1842,11 @@ def get_live_analytics():
         stats_map = {}
         for line in out.splitlines():
             tokens = line.split()
-            for i in range(0, len(tokens)-1, 2):
+            for i in range(0, len(tokens) - 1, 2):
                 k = tokens[i]
-                v = tokens[i+1]
+                v = tokens[i + 1]
                 try:
-                    stats_map[k] = float(v) if '.' in v else int(v)
+                    stats_map[k] = float(v) if "." in v else int(v)
                 except Exception:
                     stats_map[k] = v
         analytics["stats"] = stats_map
@@ -1570,16 +1862,18 @@ def get_live_analytics():
             parts = line.split()
             if len(parts) >= 10:
                 try:
-                    servers.append({
-                        "id": parts[0],
-                        "name": parts[1],
-                        "address": parts[2],
-                        "state": parts[3],
-                        "qps": float(parts[4]),
-                        "queries": int(parts[8]),
-                        "drops": int(parts[9]),
-                        "latency": float(parts[11]) if len(parts) > 11 else 0.0
-                    })
+                    servers.append(
+                        {
+                            "id": parts[0],
+                            "name": parts[1],
+                            "address": parts[2],
+                            "state": parts[3],
+                            "qps": float(parts[4]),
+                            "queries": int(parts[8]),
+                            "drops": int(parts[9]),
+                            "latency": float(parts[11]) if len(parts) > 11 else 0.0,
+                        }
+                    )
                 except Exception:
                     pass
         analytics["servers"] = servers
@@ -1613,17 +1907,30 @@ def get_live_analytics():
     return analytics
 
 
-
 # Lightweight host metrics for the Overview dashboard.
 _metrics_prev = {}
 
+
 def get_system_metrics():
     now = time.monotonic()
-    result = {"cpu_percent": 0, "ram_used_mb": 0, "ram_total_mb": 0,
-              "ram_percent": 0, "swap_used_mb": 0, "disk_used_gb": 0,
-              "disk_total_gb": 0, "disk_percent": 0, "disk_read_mbs": 0,
-              "disk_write_mbs": 0, "disk_io_wait": 0, "rx_mbps": 0,
-              "tx_mbps": 0, "rx_pps": 0, "tx_pps": 0, "interfaces": []}
+    result = {
+        "cpu_percent": 0,
+        "ram_used_mb": 0,
+        "ram_total_mb": 0,
+        "ram_percent": 0,
+        "swap_used_mb": 0,
+        "disk_used_gb": 0,
+        "disk_total_gb": 0,
+        "disk_percent": 0,
+        "disk_read_mbs": 0,
+        "disk_write_mbs": 0,
+        "disk_io_wait": 0,
+        "rx_mbps": 0,
+        "tx_mbps": 0,
+        "rx_pps": 0,
+        "tx_pps": 0,
+        "interfaces": [],
+    }
     try:
         with open("/proc/stat", "r", encoding="utf-8") as f:
             vals = list(map(int, f.readline().split()[1:]))
@@ -1632,7 +1939,7 @@ def get_system_metrics():
         old = _metrics_prev.get("cpu")
         if old:
             dt, di = total - old[0], idle - old[1]
-            result["cpu_percent"] = round(max(0, min(100, 100 * (dt-di) / dt)), 1) if dt else 0
+            result["cpu_percent"] = round(max(0, min(100, 100 * (dt - di) / dt)), 1) if dt else 0
         _metrics_prev["cpu"] = (total, idle)
     except Exception:
         pass
@@ -1644,19 +1951,23 @@ def get_system_metrics():
                 mem[k] = int(v.strip().split()[0]) * 1024
         total = mem.get("MemTotal", 0)
         avail = mem.get("MemAvailable", mem.get("MemFree", 0))
-        used = max(0, total-avail)
-        result.update(ram_used_mb=round(used/1048576, 1),
-                      ram_total_mb=round(total/1048576, 1),
-                      ram_percent=round(100*used/total, 1) if total else 0)
+        used = max(0, total - avail)
+        result.update(
+            ram_used_mb=round(used / 1048576, 1),
+            ram_total_mb=round(total / 1048576, 1),
+            ram_percent=round(100 * used / total, 1) if total else 0,
+        )
         st, sf = mem.get("SwapTotal", 0), mem.get("SwapFree", 0)
-        result["swap_used_mb"] = round(max(0, st-sf)/1048576, 1)
+        result["swap_used_mb"] = round(max(0, st - sf) / 1048576, 1)
     except Exception:
         pass
     try:
         du = shutil.disk_usage("/")
-        result.update(disk_used_gb=round((du.total-du.free)/1e9, 1),
-                      disk_total_gb=round(du.total/1e9, 1),
-                      disk_percent=round(100*(du.total-du.free)/du.total, 1) if du.total else 0)
+        result.update(
+            disk_used_gb=round((du.total - du.free) / 1e9, 1),
+            disk_total_gb=round(du.total / 1e9, 1),
+            disk_percent=round(100 * (du.total - du.free) / du.total, 1) if du.total else 0,
+        )
     except Exception:
         pass
     # Aggregate physical network interfaces; exclude loopback and virtual lo.
@@ -1705,10 +2016,10 @@ def get_system_metrics():
                     io_ms += int(a[12])
         prev = _metrics_prev.get("disk")
         if prev:
-            elapsed = max(now-prev[0], 0.001)
-            result["disk_read_mbs"] = round(max(0, read_sectors-prev[1])*512/elapsed/1e6, 2)
-            result["disk_write_mbs"] = round(max(0, write_sectors-prev[2])*512/elapsed/1e6, 2)
-            result["disk_io_wait"] = round(max(0, io_ms-prev[3])/(elapsed*10), 1)
+            elapsed = max(now - prev[0], 0.001)
+            result["disk_read_mbs"] = round(max(0, read_sectors - prev[1]) * 512 / elapsed / 1e6, 2)
+            result["disk_write_mbs"] = round(max(0, write_sectors - prev[2]) * 512 / elapsed / 1e6, 2)
+            result["disk_io_wait"] = round(max(0, io_ms - prev[3]) / (elapsed * 10), 1)
         _metrics_prev["disk"] = (now, read_sectors, write_sectors, io_ms)
     except Exception:
         pass
@@ -1790,15 +2101,17 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             dnsdist_active = check_service_status("dnsdist")
             unbound_active = check_service_status("unbound")
             load_avg = [round(x, 2) for x in os.getloadavg()] if hasattr(os, "getloadavg") else [0, 0, 0]
-            return self._send_json({
-                "total_domains": total_domains,
-                "dnsdist_active": dnsdist_active,
-                "unbound_active": unbound_active,
-                "load_avg": load_avg,
-                "metrics": get_system_metrics(),
-                "hostname": os.uname().nodename if hasattr(os, "uname") else "Server",
-                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
+            return self._send_json(
+                {
+                    "total_domains": total_domains,
+                    "dnsdist_active": dnsdist_active,
+                    "unbound_active": unbound_active,
+                    "load_avg": load_avg,
+                    "metrics": get_system_metrics(),
+                    "hostname": os.uname().nodename if hasattr(os, "uname") else "Server",
+                    "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                }
+            )
 
         elif path == "/api/analytics/live":
             return self._send_json(get_live_analytics())
@@ -1809,12 +2122,14 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             with open(DNSDIST_CONF, "r", encoding="utf-8") as f:
                 content = f.read()
             mtime = datetime.fromtimestamp(os.path.getmtime(DNSDIST_CONF)).strftime("%Y-%m-%d %H:%M:%S")
-            return self._send_json({
-                "path": DNSDIST_CONF,
-                "content": content,
-                "mtime": mtime,
-                "size": len(content)
-            })
+            return self._send_json(
+                {
+                    "path": DNSDIST_CONF,
+                    "content": content,
+                    "mtime": mtime,
+                    "size": len(content),
+                }
+            )
 
         elif path == "/api/config/dnsdist/structured":
             if not os.path.exists(DNSDIST_CONF):
@@ -1832,12 +2147,14 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             with open(UNBOUND_CONF, "r", encoding="utf-8") as f:
                 content = f.read()
             mtime = datetime.fromtimestamp(os.path.getmtime(UNBOUND_CONF)).strftime("%Y-%m-%d %H:%M:%S")
-            return self._send_json({
-                "path": UNBOUND_CONF,
-                "content": content,
-                "mtime": mtime,
-                "size": len(content)
-            })
+            return self._send_json(
+                {
+                    "path": UNBOUND_CONF,
+                    "content": content,
+                    "mtime": mtime,
+                    "size": len(content),
+                }
+            )
 
         elif path == "/api/config/unbound/structured":
             if not os.path.exists(UNBOUND_CONF):
@@ -1855,12 +2172,14 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             with open(SOURCES_TXT, "r", encoding="utf-8") as f:
                 content = f.read()
             mtime = datetime.fromtimestamp(os.path.getmtime(SOURCES_TXT)).strftime("%Y-%m-%d %H:%M:%S")
-            return self._send_json({
-                "path": SOURCES_TXT,
-                "content": content,
-                "mtime": mtime,
-                "size": len(content)
-            })
+            return self._send_json(
+                {
+                    "path": SOURCES_TXT,
+                    "content": content,
+                    "mtime": mtime,
+                    "size": len(content),
+                }
+            )
 
         elif path == "/api/blocklist/search":
             q = query.get("q", [""])[0]
@@ -1877,14 +2196,15 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             log_content = ""
             if os.path.exists(UPDATE_LOG):
                 try:
-                    res = subprocess.run(["tail", "-n", str(lines_req), UPDATE_LOG], capture_output=True, text=True)
+                    res = subprocess.run(
+                        ["tail", "-n", str(lines_req), UPDATE_LOG],
+                        capture_output=True,
+                        text=True,
+                    )
                     log_content = res.stdout
                 except Exception as e:
                     log_content = f"Error reading log: {e}"
-            return self._send_json({
-                "is_running": active_update_job["running"],
-                "log": log_content
-            })
+            return self._send_json({"is_running": active_update_job["running"], "log": log_content})
 
         elif path == "/api/services":
             services = get_netstat_services()
@@ -1898,15 +2218,21 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             file_size = os.path.getsize(log_path) if file_exists else 0
             if file_exists:
                 try:
-                    res = subprocess.run(["tail", "-n", str(lines_req), log_path], capture_output=True, text=True)
+                    res = subprocess.run(
+                        ["tail", "-n", str(lines_req), log_path],
+                        capture_output=True,
+                        text=True,
+                    )
                     log_content = res.stdout
                 except Exception as e:
                     log_content = f"Error reading log: {e}"
-            return self._send_json({
-                "exists": file_exists,
-                "size_bytes": file_size,
-                "lines": [line_item.strip() for line_item in log_content.splitlines() if line_item.strip()]
-            })
+            return self._send_json(
+                {
+                    "exists": file_exists,
+                    "size_bytes": file_size,
+                    "lines": [line_item.strip() for line_item in log_content.splitlines() if line_item.strip()],
+                }
+            )
 
         elif path == "/api/tools/system-info":
             info = get_tools_system_info()
@@ -1917,17 +2243,23 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             log_content = ""
             if os.path.exists(MAINTENANCE_LOG):
                 try:
-                    res = subprocess.run(["tail", "-n", str(lines_req), MAINTENANCE_LOG], capture_output=True, text=True)
+                    res = subprocess.run(
+                        ["tail", "-n", str(lines_req), MAINTENANCE_LOG],
+                        capture_output=True,
+                        text=True,
+                    )
                     log_content = res.stdout
                 except Exception as e:
                     log_content = f"Error reading maintenance log: {e}"
-            return self._send_json({
-                "is_running": active_tool_update["running"],
-                "status": active_tool_update["status"],
-                "type": active_tool_update["type"],
-                "start_time": active_tool_update["start_time"],
-                "log": log_content
-            })
+            return self._send_json(
+                {
+                    "is_running": active_tool_update["running"],
+                    "status": active_tool_update["status"],
+                    "type": active_tool_update["type"],
+                    "start_time": active_tool_update["start_time"],
+                    "log": log_content,
+                }
+            )
 
         else:
             return self._send_json({"error": "Not Found"}, 404)
@@ -1945,19 +2277,19 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             if dnsdist_password is None:
                 return self._send_json(
                     {"error": "Password DNSDist Web UI tidak ditemukan di /etc/dnsdist/dnsdist.conf."},
-                    503
+                    503,
                 )
 
-            if (
-                username == APP_CONFIG["admin_username"]
-                and secrets.compare_digest(password, dnsdist_password)
-            ):
+            if username == APP_CONFIG["admin_username"] and secrets.compare_digest(password, dnsdist_password):
                 token = secrets.token_hex(24)
                 active_sessions.add(token)
                 save_sessions(active_sessions)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
-                self.send_header("Set-Cookie", f"smartdns_session={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400")
+                self.send_header(
+                    "Set-Cookie",
+                    f"smartdns_session={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400",
+                )
                 self.end_headers()
                 self.wfile.write(json.dumps({"success": True, "token": token}).encode("utf-8"))
             else:
@@ -1995,10 +2327,13 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             if validate_first:
                 is_ok, message = test_dnsdist_syntax(content)
                 if not is_ok:
-                    return self._send_json({
-                        "error": "Syntax validation failed. Config was not saved.",
-                        "details": message
-                    }, 400)
+                    return self._send_json(
+                        {
+                            "error": "Syntax validation failed. Config was not saved.",
+                            "details": message,
+                        },
+                        400,
+                    )
 
             # Create backup
             try:
@@ -2010,7 +2345,7 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                         os.chmod(backup_path, 0o600)
                     except Exception:
                         pass
-                
+
                 # Write new config with secure 0640 permissions
                 fd = os.open(DNSDIST_CONF, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o640)
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -2023,11 +2358,13 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                     pass
                 os.chmod(DNSDIST_CONF, 0o640)
 
-                return self._send_json({
-                    "success": True,
-                    "message": "Config saved successfully! Automatic backup created.",
-                    "backup": backup_path if 'backup_path' in locals() else None
-                })
+                return self._send_json(
+                    {
+                        "success": True,
+                        "message": "Config saved successfully! Automatic backup created.",
+                        "backup": backup_path if "backup_path" in locals() else None,
+                    }
+                )
             except Exception as e:
                 return self._send_json({"error": f"Failed to save file: {e}"}, 500)
 
@@ -2049,10 +2386,13 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             # Test syntax before writing
             is_ok, msg = test_dnsdist_syntax(new_content)
             if not is_ok:
-                return self._send_json({
-                    "error": "Validasi sintaks dnsdist gagal. Perubahan dibatalkan.",
-                    "details": msg
-                }, 400)
+                return self._send_json(
+                    {
+                        "error": "Validasi sintaks dnsdist gagal. Perubahan dibatalkan.",
+                        "details": msg,
+                    },
+                    400,
+                )
 
             # Create backup
             try:
@@ -2077,9 +2417,17 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                 reloaded = False
                 reload_msg = ""
                 if body.get("auto_reload", True):
-                    r = subprocess.run(["systemctl", "restart", "dnsdist"], capture_output=True, text=True)
-                    reloaded = (r.returncode == 0)
-                    reload_msg = " & service dnsdist berhasil di-restart!" if reloaded else f" (namun restart dnsdist gagal: {r.stderr})"
+                    r = subprocess.run(
+                        ["systemctl", "restart", "dnsdist"],
+                        capture_output=True,
+                        text=True,
+                    )
+                    reloaded = r.returncode == 0
+                    reload_msg = (
+                        " & service dnsdist berhasil di-restart!"
+                        if reloaded
+                        else f" (namun restart dnsdist gagal: {r.stderr})"
+                    )
 
                 # Auto-sync ACL to Unbound if requested
                 if body.get("sync_acl", True) and "acl" in body:
@@ -2092,12 +2440,14 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                     if ok_u:
                         reload_msg += " & ACL otomatis disinkronkan ke Unbound"
 
-                return self._send_json({
-                    "success": True,
-                    "message": f"Konfigurasi berhasil diperbarui{reload_msg}",
-                    "backup": backup_path,
-                    "data": parse_dnsdist_structured(new_content)
-                })
+                return self._send_json(
+                    {
+                        "success": True,
+                        "message": f"Konfigurasi berhasil diperbarui{reload_msg}",
+                        "backup": backup_path,
+                        "data": parse_dnsdist_structured(new_content),
+                    }
+                )
             except Exception as e:
                 return self._send_json({"error": f"Gagal menyimpan file: {e}"}, 500)
 
@@ -2105,12 +2455,20 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             try:
                 res = subprocess.run(["systemctl", "restart", "dnsdist"], capture_output=True, text=True)
                 if res.returncode == 0:
-                    return self._send_json({"success": True, "message": "dnsdist service restarted successfully!"})
+                    return self._send_json(
+                        {
+                            "success": True,
+                            "message": "dnsdist service restarted successfully!",
+                        }
+                    )
                 else:
-                    return self._send_json({
-                        "error": "Failed to restart dnsdist",
-                        "details": res.stderr or res.stdout
-                    }, 500)
+                    return self._send_json(
+                        {
+                            "error": "Failed to restart dnsdist",
+                            "details": res.stderr or res.stdout,
+                        },
+                        500,
+                    )
             except Exception as e:
                 return self._send_json({"error": str(e)}, 500)
 
@@ -2132,10 +2490,13 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             # Test syntax before writing
             is_ok, msg = test_unbound_syntax(new_content)
             if not is_ok:
-                return self._send_json({
-                    "error": "Validasi sintaks Unbound gagal. Perubahan dibatalkan.",
-                    "details": msg
-                }, 400)
+                return self._send_json(
+                    {
+                        "error": "Validasi sintaks Unbound gagal. Perubahan dibatalkan.",
+                        "details": msg,
+                    },
+                    400,
+                )
 
             # Create backup
             try:
@@ -2155,9 +2516,17 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                 reloaded = False
                 reload_msg = ""
                 if body.get("auto_reload", True):
-                    r = subprocess.run(["systemctl", "restart", "unbound"], capture_output=True, text=True)
-                    reloaded = (r.returncode == 0)
-                    reload_msg = " & service unbound berhasil di-restart!" if reloaded else f" (namun restart unbound gagal: {r.stderr})"
+                    r = subprocess.run(
+                        ["systemctl", "restart", "unbound"],
+                        capture_output=True,
+                        text=True,
+                    )
+                    reloaded = r.returncode == 0
+                    reload_msg = (
+                        " & service unbound berhasil di-restart!"
+                        if reloaded
+                        else f" (namun restart unbound gagal: {r.stderr})"
+                    )
 
                 # Sync ACL to dnsdist if requested
                 if body.get("sync_acl", True) and "acl" in body:
@@ -2170,12 +2539,14 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                     if ok_d:
                         reload_msg += " & ACL otomatis disinkronkan ke DNSDist"
 
-                return self._send_json({
-                    "success": True,
-                    "message": f"Konfigurasi Unbound berhasil diperbarui{reload_msg}",
-                    "backup": backup_path,
-                    "data": parse_unbound_structured(new_content)
-                })
+                return self._send_json(
+                    {
+                        "success": True,
+                        "message": f"Konfigurasi Unbound berhasil diperbarui{reload_msg}",
+                        "backup": backup_path,
+                        "data": parse_unbound_structured(new_content),
+                    }
+                )
             except Exception as e:
                 return self._send_json({"error": f"Gagal menyimpan file Unbound: {e}"}, 500)
 
@@ -2188,10 +2559,13 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             # Test syntax
             is_ok, msg = test_unbound_syntax(content)
             if not is_ok:
-                return self._send_json({
-                    "error": "Validasi sintaks Unbound gagal. Perubahan dibatalkan.",
-                    "details": msg
-                }, 400)
+                return self._send_json(
+                    {
+                        "error": "Validasi sintaks Unbound gagal. Perubahan dibatalkan.",
+                        "details": msg,
+                    },
+                    400,
+                )
 
             try:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -2210,15 +2584,25 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                 reloaded = False
                 reload_msg = ""
                 if body.get("auto_reload", True):
-                    r = subprocess.run(["systemctl", "restart", "unbound"], capture_output=True, text=True)
-                    reloaded = (r.returncode == 0)
-                    reload_msg = " & service unbound berhasil di-restart!" if reloaded else f" (namun restart unbound gagal: {r.stderr})"
+                    r = subprocess.run(
+                        ["systemctl", "restart", "unbound"],
+                        capture_output=True,
+                        text=True,
+                    )
+                    reloaded = r.returncode == 0
+                    reload_msg = (
+                        " & service unbound berhasil di-restart!"
+                        if reloaded
+                        else f" (namun restart unbound gagal: {r.stderr})"
+                    )
 
-                return self._send_json({
-                    "success": True,
-                    "message": f"Konfigurasi Unbound berhasil disimpan!{reload_msg}",
-                    "backup": backup_path
-                })
+                return self._send_json(
+                    {
+                        "success": True,
+                        "message": f"Konfigurasi Unbound berhasil disimpan!{reload_msg}",
+                        "backup": backup_path,
+                    }
+                )
             except Exception as e:
                 return self._send_json({"error": f"Gagal menyimpan file: {e}"}, 500)
 
@@ -2232,21 +2616,32 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             try:
                 res = subprocess.run(["systemctl", "restart", "unbound"], capture_output=True, text=True)
                 if res.returncode == 0:
-                    return self._send_json({"success": True, "message": "unbound service restarted successfully!"})
+                    return self._send_json(
+                        {
+                            "success": True,
+                            "message": "unbound service restarted successfully!",
+                        }
+                    )
                 else:
-                    return self._send_json({
-                        "error": "Failed to restart unbound",
-                        "details": res.stderr or res.stdout
-                    }, 500)
+                    return self._send_json(
+                        {
+                            "error": "Failed to restart unbound",
+                            "details": res.stderr or res.stdout,
+                        },
+                        500,
+                    )
             except Exception as e:
                 return self._send_json({"error": str(e)}, 500)
-
 
         elif path == "/api/cache/flush":
             ok, out = exec_dnsdist_console('getPool(""):getCache():expunge(0)')
             unbound_flushed = False
             try:
-                r_unb = subprocess.run(["unbound-control", "flush_zone", "."], capture_output=True, text=True)
+                r_unb = subprocess.run(
+                    ["unbound-control", "flush_zone", "."],
+                    capture_output=True,
+                    text=True,
+                )
                 if r_unb.returncode == 0:
                     unbound_flushed = True
             except Exception:
@@ -2258,10 +2653,13 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                     msg += " Cache Unbound recurser juga di-flush."
                 return self._send_json({"success": True, "message": msg, "expunged": out})
             else:
-                return self._send_json({
-                    "error": "Gagal membersihkan cache via console dnsdist",
-                    "details": out
-                }, 500)
+                return self._send_json(
+                    {
+                        "error": "Gagal membersihkan cache via console dnsdist",
+                        "details": out,
+                    },
+                    500,
+                )
 
         elif path == "/api/querylog/clear":
             log_path = "/var/log/dnsdist_queries.log"
@@ -2286,11 +2684,13 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                     f.write(content)
                 os.chmod(SOURCES_TXT, 0o644)
 
-                return self._send_json({
-                    "success": True,
-                    "message": "Sources saved successfully!",
-                    "backup": backup_path if 'backup_path' in locals() else None
-                })
+                return self._send_json(
+                    {
+                        "success": True,
+                        "message": "Sources saved successfully!",
+                        "backup": backup_path if "backup_path" in locals() else None,
+                    }
+                )
             except Exception as e:
                 return self._send_json({"error": f"Failed to save sources: {e}"}, 500)
 
@@ -2303,12 +2703,17 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
 
             try:
                 import threading
+
                 def run_updater():
                     active_update_job["running"] = True
                     active_update_job["start_time"] = time.time()
                     active_update_job["status"] = "running"
                     try:
-                        proc = subprocess.Popen(["bash", UPDATE_SCRIPT], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        proc = subprocess.Popen(
+                            ["bash", UPDATE_SCRIPT],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL,
+                        )
                         active_update_job["pid"] = proc.pid
                         proc.wait()
                         active_update_job["status"] = "finished"
@@ -2323,17 +2728,25 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                 t = threading.Thread(target=run_updater, daemon=True)
                 t.start()
 
-                return self._send_json({"success": True, "message": "Blocklist update process started in background."})
+                return self._send_json(
+                    {
+                        "success": True,
+                        "message": "Blocklist update process started in background.",
+                    }
+                )
             except Exception as e:
                 return self._send_json({"error": f"Failed to trigger update: {e}"}, 500)
 
         elif path == "/api/password/change":
-            return self._send_json({
-                "error": (
-                    "Password login SmartDNS UI mengikuti password DNSDist Web UI. "
-                    "Ubah password melalui konfigurasi DNSDist."
-                )
-            }, 409)
+            return self._send_json(
+                {
+                    "error": (
+                        "Password login SmartDNS UI mengikuti password DNSDist Web UI. "
+                        "Ubah password melalui konfigurasi DNSDist."
+                    )
+                },
+                409,
+            )
 
         elif path == "/api/tools/exec":
             body = self._read_json_body()
@@ -2397,6 +2810,7 @@ def run():
     except KeyboardInterrupt:
         print("\nShutting down server...")
         httpd.server_close()
+
 
 if __name__ == "__main__":
     run()

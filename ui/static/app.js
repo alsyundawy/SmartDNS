@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* ==========================================================================
    SmartDNS Management Dashboard - Interactive Client Application
    ========================================================================== */
@@ -24,7 +25,7 @@ async function checkAuth() {
     } else {
       showLogin();
     }
-  } catch (err) {
+  } catch {
     showLogin();
   }
 }
@@ -100,7 +101,7 @@ async function handleLogin(e) {
 async function handleLogout() {
   try {
     await fetch("/api/logout", { method: "POST" });
-  } catch (err) {}
+  } catch {}
   showLogin();
   showToast("Anda telah keluar dari sesi.", "success");
 }
@@ -345,7 +346,7 @@ async function fetchTotalCountOnly() {
     document.getElementById("search-total-count").textContent =
       formatted + " domain";
     document.getElementById("nav-badge-count").textContent = formatted;
-  } catch (err) {}
+  } catch {}
 }
 
 function updateServerClock() {
@@ -927,7 +928,7 @@ function addUpstreamServer() {
     return;
   }
 
-  const name = nameInput.value.trim() || addr.replace(/[\.:]/g, "_");
+  const name = nameInput.value.trim() || addr.replace(/[.:]/g, "_");
   let check = checkInput.value.trim();
   if (check && !check.endsWith(".")) check += ".";
   const timeout = parseInt(toInput.value) || 2;
@@ -1259,7 +1260,7 @@ async function fetchDNSDistConfig() {
     } else {
       showToast("Gagal memuat config dnsdist: " + data.error, "error");
     }
-  } catch (err) {
+  } catch {
     showToast("Error koneksi saat memuat config dnsdist", "error");
   }
 }
@@ -1756,7 +1757,7 @@ async function fetchUnboundConfig() {
     } else {
       showToast("Gagal memuat config unbound: " + data.error, "error");
     }
-  } catch (err) {
+  } catch {
     showToast("Error koneksi saat memuat config unbound", "error");
   }
 }
@@ -1906,7 +1907,7 @@ async function fetchSourcesConfig() {
       document.getElementById("stat-sources-count").textContent =
         lines.length + " Feeds";
     }
-  } catch (err) {
+  } catch {
     showToast("Gagal memuat sumber blocklist", "error");
   }
 }
@@ -1931,7 +1932,7 @@ async function saveSourcesConfig() {
     } else {
       showToast("Gagal menyimpan sources: " + data.error, "error");
     }
-  } catch (err) {
+  } catch {
     showToast("Error koneksi saat menyimpan sources", "error");
   } finally {
     btn.disabled = false;
@@ -1984,7 +1985,7 @@ async function fetchUpdateLog() {
       dot.style.background = "#10b981";
       dot.title = "Selesai / Diam";
     }
-  } catch (err) {}
+  } catch {}
 }
 
 let pollInterval = null;
@@ -2779,3 +2780,56 @@ function startUpdateLogPolling(cmdDisplay) {
     }
   }, 1200);
 }
+
+// Expose public functions to global window scope for HTML onclick/onchange handlers
+Object.assign(window, {
+  handleLogin,
+  handleLogout,
+  refreshCurrentView,
+  debounceDomainSearch,
+  clearDomainSearch,
+  switchDNSDistMode,
+  addWhitelistDomain,
+  removeWhitelistDomain,
+  addACLPrefix,
+  removeACLPrefix,
+  togglePasswordVisibility,
+  saveStructuredDNSDistConfig,
+  flushDNSCache,
+  addUpstreamServer,
+  removeUpstreamServer,
+  addCustomDNSRecord,
+  removeCustomDNSRecord,
+  clearQueryLog,
+  testDNSDistSyntax,
+  reloadDNSDistService,
+  copyDNSDistContent,
+  switchUnboundMode,
+  filterDomainInsecure,
+  addDomainInsecure,
+  removeDomainInsecure,
+  applyBulkDomainInsecure,
+  addUnboundACL,
+  removeUnboundACL,
+  saveStructuredUnboundConfig,
+  testUnboundSyntax,
+  saveUnboundRawConfig,
+  reloadUnboundService,
+  copyUnboundContent,
+  triggerBlocklistUpdate,
+  copySourcesContent,
+  filterServicesTable,
+  copyUUID,
+  setDigDomain,
+  clearTerminalOutput,
+  copyTerminalOutput,
+  runDigCommand,
+  runConfigCheck,
+  runServiceStatus,
+  runServiceRestart,
+  runHeartbeat,
+  runViewMetadata,
+  runViewInstallEnv,
+  runQuickDiagnostics,
+  triggerUpdate,
+});

@@ -201,9 +201,11 @@ sudo journalctl -u unbound -f
 ### Akses & Login SmartDNS Web UI
 
 1. Buka browser web dan arahkan ke alamat IP server:
+
    ```text
    http://<IP-SERVER-ANDA>:5000
    ```
+
 2. Masukkan kredensial login:
    - **Username**: `admin`
    - **Password**: Password yang ditampilkan saat instalasi selesai (disimpan dalam `/etc/dnsdist/dnsdist.conf`).
@@ -387,11 +389,13 @@ SMARTDNS_TELEMETRY_URL=""
 Repositori ini telah menyediakan kode server telemetri siap pakai di folder [`tools/telemetry-server/`](file:///Users/alsyundawy/Downloads/GitHub/SmartDNS/tools/telemetry-server/):
 
 1. Salin isi folder `tools/telemetry-server/` ke webroot server PHP Anda (misal Nginx + PHP 8.1+):
+
    ```bash
    cp -r tools/telemetry-server/* /var/www/telemetry/
    chown -R www-data:www-data /var/www/telemetry/
    chmod 750 /var/www/telemetry/data
    ```
+
 2. Endpoint penerima heartbeat: `https://telemetry.domainanda.com/api/v1/heartbeat.php`.
 3. Dashboard monitoring armada (_Fleet Monitor_): `https://telemetry.domainanda.com/?key=alsyundawy2026`.
 
