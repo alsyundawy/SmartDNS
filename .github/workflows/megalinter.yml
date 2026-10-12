@@ -21,12 +21,12 @@ jobs:
       contents: read
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Run MegaLinter
-        uses: oxsecurity/megalinter@v8
+        uses: oxsecurity/megalinter@v10
         env:
           VALIDATE_ALL_CODEBASE: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

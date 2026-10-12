@@ -32,17 +32,18 @@ CHANGELOG:
 
 <img src="docs/images/banner.png" width="100%" alt="SmartDNS Banner">
 
-# 🚀 SmartDNS Optimized
+# 🚀 SmartDNS
 
-## High-Performance Recursive DNS Platform Powered by Unbound and dnsdist
+### High-Performance Recursive DNS Platform Powered by Unbound, dnsdist & SmartDNS Web UI
 
-## Platform DNS Rekursif Kinerja Tinggi Ditenagai oleh Unbound dan dnsdist
+### Platform DNS Rekursif Kinerja Tinggi Ditenagai oleh Unbound, dnsdist & SmartDNS Web UI
 
 Developed and maintained by <a href="https://mynoc.id/" target="_blank">**MyNOC.ID**</a> & <a href="https://alsyundawy.com" target="_blank">**ALSYUNDAWY IT SOLUTION**</a>
 
 ---
 
 [![Version](https://img.shields.io/badge/version-1.0.3--shellcheck--optimizer-brightgreen.svg)](https://github.com/alsyundawy/SmartDNS/releases)
+[![MegaLinter](https://github.com/alsyundawy/SmartDNS/actions/workflows/megalinter.yml/badge.svg)](https://github.com/alsyundawy/SmartDNS/actions/workflows/megalinter.yml)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04__24.04__26.04-E95420?logo=ubuntu)
 ![Debian](https://img.shields.io/badge/Debian-11__12__13-A81D33?logo=debian)
 ![Bash](https://img.shields.io/badge/bash-%3E%3D4.0-41bf24.svg?logo=gnu-bash)
