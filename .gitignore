@@ -27,3 +27,10 @@ Thumbs.db
 swapfile
 
 .well-known/
+
+# Python / Web UI Cache
+__pycache__/
+*.py[cod]
+
+# Tooling
+.trunk/

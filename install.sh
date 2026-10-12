@@ -206,6 +206,31 @@ read -rp "Install required packages? [Y/n] : " INSTALL_PACKAGE
 
 INSTALL_PACKAGE=${INSTALL_PACKAGE:-Y}
 
+####################################
+# SmartDNS Management UI
+####################################
+
+install_smartdns_ui() {
+
+	local ui_installer="${BASE_DIR}/ui/install-local.sh"
+
+	if [[ ! -f ${ui_installer} ]]; then
+		warning "SmartDNS UI installer not found; skipping UI installation."
+		return 0
+	fi
+
+	info "Installing SmartDNS Management UI..."
+
+	if bash "${ui_installer}"; then
+		success "SmartDNS Management UI installed."
+	else
+		warning "SmartDNS UI installation failed. DNS services remain installed; check smartdns-ui.service."
+	fi
+
+	return 0
+
+}
+
 if [[ ${INSTALL_PACKAGE} =~ ^[Yy]$ ]]; then
 
 	# Backup and prepare resolver/systemd-resolved settings before installation to prevent port 53 bind conflicts
@@ -242,6 +267,8 @@ if [[ ${INSTALL_PACKAGE} =~ ^[Yy]$ ]]; then
 
 	install_sysctl
 
+	install_journald
+
 	info "Backup current configuration..."
 	backup_config || exit 1
 
@@ -277,6 +304,10 @@ if [[ ${INSTALL_PACKAGE} =~ ^[Yy]$ ]]; then
 
 	if health_check; then
 
+		echo
+		sleep 1
+		install_smartdns_ui
+
 		save_state DONE
 
 	else
@@ -286,8 +317,6 @@ if [[ ${INSTALL_PACKAGE} =~ ^[Yy]$ ]]; then
 		exit 1
 
 	fi
-
-	save_state DONE
 
 fi
 
@@ -313,4 +342,11 @@ echo "URL       : http://${SERVER_IPV4}:8083"
 echo "Username  : admin"
 echo "Password  : ${DNSDIST_WEB_PASSWORD}"
 echo "API Key   : ${DNSDIST_API_KEY}"
+echo
+echo "======================================"
+echo "     SMARTDNS MANAGEMENT WEB UI"
+echo "======================================"
+echo "URL       : http://${SERVER_IPV4}:5000"
+echo "Username  : admin"
+echo "Password  : ${DNSDIST_WEB_PASSWORD}"
 echo

@@ -1,6 +1,11 @@
 <!-- markdownlint-disable MD033 MD041 -->
 <!--
 CHANGELOG:
+- Released v1.0.3-shellcheck-optimizer with integrated SmartDNS Management Web UI on port 5000.
+- Added real-time hardware monitoring, live DNS analytics, and blocklist search in Web UI.
+- Ported system journal usage and retention limits (200MB, 7 days) via engine/sysctl.sh.
+- Synchronized telemetry heartbeat and UUID handling across updates.
+- Maintained 100% ShellCheck compliance across all shell scripts.
 - Released v1.0.1-shellcheck-optimizer with full ShellCheck compliance and strict bash standards.
 - Added Automatic Update Patch engine (update.sh --patch) with self-update re-execution logic.
 - Integrated multi-source blocklist downloader with merge and fallback URL directives.
@@ -36,7 +41,7 @@ Developed and maintained by <a href="https://mynoc.id/" target="_blank">**MyNOC.
 
 ---
 
-[![Version](https://img.shields.io/badge/version-1.0.1--shellcheck--optimizer-brightgreen.svg)](https://github.com/alsyundawy/SmartDNS/releases)
+[![Version](https://img.shields.io/badge/version-1.0.3--shellcheck--optimizer-brightgreen.svg)](https://github.com/alsyundawy/SmartDNS/releases)
 ![Ubuntu](https://img.shields.io/badge/Ubuntu-22.04__24.04__26.04-E95420?logo=ubuntu)
 ![Debian](https://img.shields.io/badge/Debian-11__12__13-A81D33?logo=debian)
 ![Bash](https://img.shields.io/badge/bash-%3E%3D4.0-41bf24.svg?logo=gnu-bash)
@@ -119,7 +124,8 @@ flowchart TD
 - **Heartbeat Scheduler**: Cron-based health check reporting status every 5 minutes.
 - **Autonomous Updater**: Automated daily database sync for ad and malware blocklists.
 - **Automatic Update Patch**: Automated engine patch updates and blocklist maintenance via update script.
-- **DNSDist Web UI Console**: Dedicated admin monitoring dashboard.
+- **SmartDNS Management Web UI**: Built-in control center on port `5000` with real-time monitoring (CPU, RAM, swap, disk I/O, network traffic PPS), live DNS query logs, domain blocklist search, and resolution test suite.
+- **DNSDist Web UI Console**: Dedicated admin monitoring dashboard on port `8083`.
 
 ---
 
@@ -224,7 +230,8 @@ flowchart TD
 - **Penjadwal Heartbeat**: Pengiriman metrik kesehatan dan status server otomatis setiap 5 menit.
 - **Pembaruan Mandiri**: Sinkronisasi database blocklist iklan dan malware harian melalui cron job.
 - **Automatic Update Patch**: Pembaruan otomatis patch engine dan blocklist melalui skrip update.
-- **Dasbor Web UI dnsdist**: Konsol manajemen web interaktif untuk memantau performa.
+- **SmartDNS Management Web UI**: Dasbor kontrol web di port `5000` dengan pemantauan metrik sistem real-time (CPU, RAM, swap, I/O disk, PPS jaringan), log kueri DNS langsung, pencarian blocklist, dan pengujian DNS.
+- **Dasbor Web UI dnsdist**: Konsol manajemen web interaktif di port `8083` untuk memantau performa perutean.
 
 ---
 
@@ -308,6 +315,7 @@ SmartDNS/
 ```bash
 systemctl restart unbound
 systemctl restart dnsdist
+systemctl restart smartdns-ui
 ```
 
 ### Check Service Status / Memeriksa Status Layanan
@@ -315,6 +323,7 @@ systemctl restart dnsdist
 ```bash
 systemctl status unbound
 systemctl status dnsdist
+systemctl status smartdns-ui
 ```
 
 ### Perform DNS Lookups / Pengujian Resolusi DNS
@@ -350,7 +359,17 @@ cat cache/secret.env
 ```bash
 cat /etc/cron.d/smartdns
 cat /etc/cron.d/smartdns-heartbeat
+cat /etc/cron.d/smartdns-update
 ```
+
+---
+
+## 🖥️ Web Interfaces & Dashboards / Antarmuka Web & Dasbor
+
+| Dashboard / Konsol | Port | URL | Keterangan / Credentials |
+| ------------------ | :--: | --- | ------------------------ |
+| **SmartDNS Management UI** | `5000` | `http://<SERVER-IP>:5000` | Real-time monitoring, query analytics, blocklist lookup (`admin` / DNSDist password) |
+| **dnsdist Web Console** | `8083` | `http://<SERVER-IP>:8083` | DNS routing stats, live query graphs (`admin` / `DNSDIST_WEB_PASSWORD`) |
 
 ---
 

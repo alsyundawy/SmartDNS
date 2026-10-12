@@ -1,0 +1,2037 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartDNS Control Center &amp; Management Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/app.css?v=3.6">
+</head>
+<body class="dark-theme">
+  <!-- Dynamic Ambient Glows -->
+  <div class="ambient-glow glow-cyan"></div>
+  <div class="ambient-glow glow-blue"></div>
+  <div class="ambient-glow glow-purple"></div>
+
+  <!-- Login Modal / Screen -->
+  <div id="login-modal" class="login-wrapper">
+    <div class="login-card glass-panel">
+      <div class="login-brand">
+        <div class="brand-icon pulse-glow">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <h2>SmartDNS Control Center</h2>
+        <p class="subtitle">Secure DNS Management &amp; Threat Defense</p>
+      </div>
+
+      <form id="login-form" class="login-form" onsubmit="handleLogin(event)">
+        <div id="login-error" class="alert-box error hidden"></div>
+        <div class="form-group">
+          <label for="username">Username</label>
+          <div class="input-icon-wrap">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <input type="text" id="username" placeholder="Masukkan username" required autocomplete="username" value="admin">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-icon-wrap">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <input type="password" id="password" placeholder="Masukkan password" required autocomplete="current-password">
+          </div>
+        </div>
+
+        <button type="submit" id="btn-login" class="btn btn-primary btn-block">
+          <span class="btn-text">Masuk ke Dashboard</span>
+          <div class="spinner hidden" id="login-spinner"></div>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Application Dashboard (Hidden until logged in) -->
+  <div id="app" class="app-layout hidden">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar glass-panel">
+      <div class="sidebar-header">
+        <div class="brand-badge">
+          <div class="brand-logo-small">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </div>
+          <div>
+            <span class="brand-title">SmartDNS</span>
+            <span class="brand-version" id="brand-version">v-</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" onclick="switchTab('dashboard')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          <span>Overview</span>
+        </button>
+
+        <button class="nav-item" onclick="switchTab('search')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <span>Domain Search</span>
+          <span class="badge badge-accent" id="nav-badge-count">-</span>
+        </button>
+
+        <button class="nav-item" onclick="switchTab('dnsdist')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6"></polyline>
+            <polyline points="8 6 2 12 8 18"></polyline>
+          </svg>
+          <span>DNSDist Config</span>
+        </button>
+
+        <button class="nav-item" onclick="switchTab('unbound')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+          </svg>
+          <span>Unbound Config</span>
+        </button>
+
+        <button class="nav-item" onclick="switchTab('sources')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+          <span>Blocklist Sources</span>
+        </button>
+
+        <button class="nav-item" onclick="switchTab('services')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="12" x2="2" y2="12"></line>
+            <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+            <line x1="6" y1="16" x2="6.01" y2="16"></line>
+            <line x1="10" y1="16" x2="10.01" y2="16"></line>
+          </svg>
+          <span>Active Services</span>
+          <span class="live-dot" title="Live Netstat"></span>
+        </button>
+
+        <button class="nav-item" onclick="switchTab('analytics')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+          <span>Live Analytics &amp; Query Log</span>
+          <span class="live-dot" title="Live DNS Telemetry"></span>
+        </button>
+
+        <button class="nav-item" onclick="switchTab('tools')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+          </svg>
+          <span>Tools &amp; Maintenance</span>
+        </button>
+      </nav>
+
+      
+    <div class="sidebar-credit">
+      <div>GUI by <strong>Yohanes Exklesia</strong></div>
+      <div>Developed by <a href="https://mynoc.id" target="_blank" title="ISP Managed Service Solutions - MyNOC.ID"><strong>MyNOC.ID</strong></a></div>
+    </div>
+<div class="sidebar-footer">
+        <div class="server-node-info">
+          <span class="status-indicator online"></span>
+          <div class="node-details">
+            <span class="node-name" id="node-hostname">-</span>
+            <span class="node-time" id="server-clock">--:--:--</span>
+          </div>
+        </div>
+        <button class="btn-logout" onclick="handleLogout()" title="Logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Keluar</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar glass-panel">
+        <div class="page-title-wrap">
+          <h1 id="page-title">System Overview</h1>
+          <span class="page-subtitle" id="page-subtitle">Real-time status and telemetry</span>
+        </div>
+        <div class="topbar-actions">
+          <div class="system-pills">
+            <span class="pill" id="pill-dnsdist"><span class="dot"></span> dnsdist</span>
+            <span class="pill" id="pill-unbound"><span class="dot"></span> unbound</span>
+            <span class="pill pill-load" id="pill-load">Load: 0.00</span>
+          </div>
+		<a
+		  href="https://github.com/ichandkusuma/SmartDNS"
+		  target="_blank"
+		  rel="noopener noreferrer"
+		  class="btn btn-secondary"
+		  title="Buka repository SmartDNS di GitHub"
+		>
+		  <svg width="16" height="16" viewBox="0 0 24 24"
+			   fill="none" stroke="currentColor" stroke-width="2"
+			   stroke-linecap="round" stroke-linejoin="round">
+			<path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37
+			  3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54
+			  6.44-7A5.44 5.44 0 0 0 20 4.77
+			  5.07 5.07 0 0 0 19.91 1S18.73.65
+			  16 2.48a13.38 13.38 0 0 0-7 0C6.27.65
+			  5.09 1 5.09 1A5.07 5.07 0 0 0 5
+			  4.77a5.44 5.44 0 0 0-1.5 3.78c0
+			  5.42 3.3 6.61 6.44 7A3.37 3.37 0
+			  0 0 9 18.13V22"/>
+		  </svg>
+		  GitHub
+		</a>
+          <button class="btn btn-flush btn-sm" onclick="flushDNSCache()" id="btn-flush-cache" title="Bersihkan Cache DNS">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+            <span>Flush DNS Cache</span>
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="refreshCurrentView()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 4v6h-6"></path>
+              <path d="M1 20v-6h6"></path>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Global Notifications -->
+      <div id="toast-container" class="toast-container"></div>
+
+      <!-- Tab Content: Dashboard Overview -->
+      <section id="tab-dashboard" class="tab-pane active">
+        <div class="stats-grid">
+          <!-- Card 1: Total Blocklist -->
+          <div class="stat-card glass-panel cursor-pointer" onclick="switchTab('search')">
+            <div class="stat-header">
+              <span class="stat-label">Total Blocklist Domains</span>
+              <div class="stat-icon-wrap icon-purple">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                </svg>
+              </div>
+            </div>
+            <div class="stat-number gradient-text" id="stat-total-domains">Memuat...</div>
+            <div class="stat-meta">
+              <span class="meta-tag">File: /opt/blocklist/domains.txt</span>
+              <span class="click-hint">Klik untuk cari domain &rarr;</span>
+            </div>
+          </div>
+
+          <!-- Card 2: dnsdist Engine -->
+          <div class="stat-card glass-panel cursor-pointer" onclick="switchTab('dnsdist')">
+            <div class="stat-header">
+              <span class="stat-label">DNSDist Frontend (Port 53)</span>
+              <div class="stat-icon-wrap icon-cyan">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="2" y1="12" x2="22" y2="12"></line>
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="stat-number" id="stat-dnsdist-status">
+              <span class="badge badge-success">ACTIVE</span>
+            </div>
+            <div class="stat-meta">
+              <span class="meta-tag">Config: /etc/dnsdist/dnsdist.conf</span>
+              <span class="click-hint">Edit konfigurasi &rarr;</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Unbound Resolver -->
+          <div class="stat-card glass-panel cursor-pointer" onclick="switchTab('services')">
+            <div class="stat-header">
+              <span class="stat-label">Unbound Recurser (Port 5300)</span>
+              <div class="stat-icon-wrap icon-blue">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                  <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                  <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                  <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                </svg>
+              </div>
+            </div>
+            <div class="stat-number" id="stat-unbound-status">
+              <span class="badge badge-success">ACTIVE</span>
+            </div>
+            <div class="stat-meta">
+              <span class="meta-tag">127.0.0.1:5300 &amp; [::1]:5300</span>
+              <span class="click-hint">Lihat netstat &rarr;</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Blocklist Feeds -->
+          <div class="stat-card glass-panel cursor-pointer" onclick="switchTab('sources')">
+            <div class="stat-header">
+              <span class="stat-label">Feed Sources</span>
+              <div class="stat-icon-wrap icon-amber">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </div>
+            </div>
+            <div class="stat-number text-white" id="stat-sources-count">2 Feeds</div>
+            <div class="stat-meta">
+              <span class="meta-tag">File: /opt/blocklist/sources.txt</span>
+              <span class="click-hint">Kelola URL sumber &rarr;</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Host Resource Monitoring -->
+        <div class="glass-panel p-4 mt-4" id="host-monitor-panel">
+          <h3 class="panel-title">Resource & Network Monitoring <span class="monitor-subtitle">Refresh 3s</span></h3>
+          <div class="host-metrics-grid">
+            <div class="host-metric">
+              <div class="host-metric-head"><span>CPU Usage</span><strong id="mon-cpu">--%</strong></div>
+              <div class="host-meter"><span id="mon-cpu-bar"></span></div>
+              <small id="mon-load">Load: --</small>
+            </div>
+            <div class="host-metric">
+              <div class="host-metric-head"><span>RAM Usage</span><strong id="mon-ram">--%</strong></div>
+              <div class="host-meter"><span id="mon-ram-bar"></span></div>
+              <small id="mon-ram-detail">-- / -- GB · Swap -- MB</small>
+            </div>
+            <div class="host-metric">
+              <div class="host-metric-head"><span>Disk Usage (/)</span><strong id="mon-disk">--%</strong></div>
+              <div class="host-meter"><span id="mon-disk-bar"></span></div>
+              <small id="mon-disk-detail">-- / -- GB</small>
+            </div>
+            <div class="host-metric">
+              <div class="host-metric-head"><span>Disk I/O</span><strong id="mon-iowait">I/O wait --%</strong></div>
+              <small id="mon-disk-io">Read -- MB/s · Write -- MB/s</small>
+            </div>
+            <div class="host-metric">
+              <div class="host-metric-head"><span>Network RX / TX</span><strong id="mon-network">-- / -- Mbps</strong></div>
+              <small id="mon-interfaces">Interfaces: detecting...</small>
+              <small id="mon-pps">RX -- pps · TX -- pps</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions & Status Row -->
+        <div class="grid-2-col mt-4">
+          <div class="glass-panel p-4">
+            <h3 class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              Aksi Cepat Sistem
+            </h3>
+            <div class="quick-btn-grid">
+              <button class="btn btn-secondary" onclick="switchTab('search')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                Periksa Status Domain
+              </button>
+              <button class="btn btn-secondary" onclick="switchTab('dnsdist')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit Konfigurasi DNSDist
+              </button>
+              <button class="btn btn-secondary" onclick="triggerBlocklistUpdate()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                </svg>
+                Jalankan Update Blocklist
+              </button>
+              <button class="btn btn-secondary" onclick="switchTab('services')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                Monitor Port &amp; Servis Aktif
+              </button>
+              <button class="btn btn-secondary" onclick="flushDNSCache()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+                Bersihkan (Flush) DNS Cache
+              </button>
+              <button class="btn btn-secondary" onclick="switchTab('analytics')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10"></line>
+                  <line x1="12" y1="20" x2="12" y2="4"></line>
+                  <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+                Live Analytics &amp; Query Log
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-panel p-4">
+            <h3 class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              Informasi Mesin &amp; Port
+            </h3>
+            <ul class="system-info-list">
+              <li>
+                <span class="info-label">IP Server</span>
+                <span class="info-value font-mono" id="machine-ip">-</span>
+              </li>
+              <li>
+                <span class="info-label">DNSDist Frontend</span>
+                <span class="info-value font-mono">Port 53 (TCP/UDP) &bull; API :8083</span>
+              </li>
+              <li>
+                <span class="info-label">Unbound Resolver</span>
+                <span class="info-value font-mono">Port 5300 (Localhost only)</span>
+              </li>
+              <li>
+                <span class="info-label">Web UI Management</span>
+                <span class="info-value font-mono text-cyan">Port 5000 (Active)</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab Content: Domain Search & Counter -->
+      <section id="tab-search" class="tab-pane">
+        <div class="glass-panel p-5">
+          <div class="search-header-row">
+            <div>
+              <h2 class="section-title">Pencarian Domain Blocklist</h2>
+              <p class="section-desc">Cek secara instan apakah domain tertentu masuk ke dalam daftar blokir <span class="font-mono text-cyan">/opt/blocklist/domains.txt</span>.</p>
+            </div>
+            <div class="total-blocklist-pill">
+              <span class="total-label">Total Domain Terblokir:</span>
+              <span class="total-value" id="search-total-count">-</span>
+            </div>
+          </div>
+
+          <!-- Search Input Box -->
+          <div class="domain-search-box mt-4">
+            <div class="search-input-wrap">
+              <svg class="search-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="domain-search-input" placeholder="Ketik nama domain (contoh: judi, porno, reddit, google.com)..." oninput="debounceDomainSearch()">
+              <button class="search-clear-btn hidden" id="search-clear-btn" onclick="clearDomainSearch()" title="Clear">
+                &times;
+              </button>
+            </div>
+            <button class="btn btn-primary" onclick="performDomainSearch()">
+              <span>Cari Domain</span>
+            </button>
+          </div>
+
+          <!-- Search Results Container -->
+          <div id="search-results-area" class="mt-4">
+            <div class="search-placeholder" id="search-placeholder">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <p>Masukkan kata kunci atau domain untuk memulai pencarian kecepatan tinggi.</p>
+            </div>
+
+            <!-- Match Verdict Card -->
+            <div id="verdict-card" class="verdict-card hidden"></div>
+
+            <!-- Match Table -->
+            <div id="search-table-wrap" class="search-table-wrap hidden">
+              <div class="table-header-meta">
+                <span id="results-count-text">Ditemukan 0 hasil</span>
+                <span class="text-muted text-sm">(Maksimal 100 domain ditampilkan per pencarian)</span>
+              </div>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 60px;">No</th>
+                      <th>Domain di Blocklist</th>
+                      <th style="width: 120px; text-align: center;">Tipe Cocok</th>
+                      <th style="width: 100px; text-align: right;">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="domain-results-tbody">
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab Content: DNSDist Config Editor -->
+      <section id="tab-dnsdist" class="tab-pane">
+        <div class="glass-panel p-5">
+          <div class="editor-header">
+            <div>
+              <div class="editor-badge-row">
+                <span class="file-badge">/etc/dnsdist/dnsdist.conf</span>
+                <span class="mtime-badge" id="dnsdist-mtime">-</span>
+              </div>
+              <h2 class="section-title mt-2">Konfigurasi DNSDist</h2>
+              <p class="section-desc">Atur IP Spoofing, Whitelist Domain, Prefix ACL, dan Akses Panel PowerDNS secara visual atau melalui editor Lua.</p>
+            </div>
+
+            <div class="editor-action-buttons">
+              <button class="btn btn-warning" onclick="reloadDNSDistService()" id="btn-reload-dnsdist">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                <span>Reload Service</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- DNSDist Mode Selector (Form Mode vs Raw Lua Mode) -->
+          <div class="dnsdist-mode-tabs mt-4">
+            <button class="subtab-btn active" id="btn-mode-form" onclick="switchDNSDistMode('form')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+              <span>Form Pengaturan Visual (Quick Config)</span>
+            </button>
+            <button class="subtab-btn" id="btn-mode-raw" onclick="switchDNSDistMode('raw')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+              <span>Editor Kode Lua Lengkap</span>
+            </button>
+          </div>
+
+          <!-- Section A: Form Mode (Visual Quick Settings) -->
+          <div id="dnsdist-form-view" class="dnsdist-view active mt-4">
+            <div class="config-cards-grid">
+
+              <!-- Card 1: Spoof IP (A & AAAA Records) -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-cyan">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3>IP Spoofing (Halaman Blokir)</h3>
+                      <p class="card-subtitle">IP tujuan saat domain terblokir (SpoofAction)</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group mt-3">
+                  <label for="cfg-spoof-ipv4">IPv4 Spoof Action (A Record)</label>
+                  <input type="text" id="cfg-spoof-ipv4" class="custom-input font-mono" placeholder="103.151.223.233, 103.151.222.227">
+                  <span class="field-hint">Jika 1 IP, isi 1 saja. Jika 2 atau lebih, pisahkan dengan koma (contoh: <code>103.151.223.233, 103.151.222.227</code>).</span>
+                </div>
+
+                <div class="form-group mt-3">
+                  <label for="cfg-spoof-ipv6">IPv6 Spoof Action (AAAA Record)</label>
+                  <input type="text" id="cfg-spoof-ipv6" class="custom-input font-mono" placeholder="2406:20c0::103:151:223:233, 2406:20c0::103:151:222:227">
+                  <span class="field-hint">Jika 1 IPv6, isi 1 saja. Jika 2 atau lebih, pisahkan dengan koma.</span>
+                </div>
+              </div>
+
+              <!-- Card 2: Whitelist Domains -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-emerald">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3>Whitelist Domain</h3>
+                      <p class="card-subtitle">Domain yang selalu diizinkan / dilewati (whitelistSMN)</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Add Whitelist Input -->
+                <div class="add-item-row mt-3">
+                  <input type="text" id="cfg-new-whitelist" class="custom-input font-mono" placeholder="Ketik domain (contoh: bri.co.id)..." onkeydown="if(event.key==='Enter'){event.preventDefault();addWhitelistDomain();}">
+                  <button type="button" class="btn btn-secondary" onclick="addWhitelistDomain()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Tambah</span>
+                  </button>
+                </div>
+
+                <!-- Whitelist Table / List -->
+                <div class="items-table-wrap mt-3">
+                  <table class="data-table small-table">
+                    <thead>
+                      <tr>
+                        <th>Domain Whitelist</th>
+                        <th style="width: 70px; text-align: right;">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="whitelist-items-tbody">
+                      <tr><td colspan="2" class="text-center text-muted">Belum ada domain whitelist</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Card 3: Access Control List (ACL) -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-blue">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+                        <path d="M2 12h20"></path>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3>Prefix ACL (Allowed Networks)</h3>
+                      <p class="card-subtitle">Daftar subnet / prefix IP yang boleh query DNS</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sync-banner-box mt-3 mb-2 p-2 glass-card d-flex align-items-center justify-content-between">
+                  <label class="checkbox-label mb-0" style="font-size: 0.82rem;">
+                    <input type="checkbox" id="cfg-sync-acl" checked>
+                    <span>🔄 Sinkronkan otomatis ke ACL Unbound (Dua Arah)</span>
+                  </label>
+                  <span class="badge badge-accent text-xs">Auto-Sync</span>
+                </div>
+
+                <!-- Add ACL Input -->
+                <div class="add-item-row mt-2">
+                  <input type="text" id="cfg-new-acl" class="custom-input font-mono" placeholder="Prefix CIDR (contoh: 103.54.168.0/23)..." onkeydown="if(event.key==='Enter'){event.preventDefault();addACLPrefix();}">
+                  <button type="button" class="btn btn-secondary" onclick="addACLPrefix()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Tambah</span>
+                  </button>
+                </div>
+
+                <!-- ACL List -->
+                <div class="items-table-wrap mt-3">
+                  <table class="data-table small-table">
+                    <thead>
+                      <tr>
+                        <th>Prefix / CIDR</th>
+                        <th style="width: 130px; text-align: center;">Tipe</th>
+                        <th style="width: 70px; text-align: right;">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="acl-items-tbody">
+                      <!-- Rendered by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Card 4: PowerDNS Web Panel -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-purple">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3>Panel PowerDNS / Web API</h3>
+                      <p class="card-subtitle">Pengaturan kata sandi webserver internal dnsdist (:8083)</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group mt-3">
+                  <label for="cfg-webserver-password">Password Web Panel</label>
+                  <div class="input-toggle-wrap">
+                    <input type="password" id="cfg-webserver-password" class="custom-input font-mono" placeholder="Masukkan password web panel">
+                    <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('cfg-webserver-password')">
+                      👁️
+                    </button>
+                  </div>
+                  <span class="field-hint">Hanya password yang dapat diubah sesuai kebijakan keamanan.</span>
+                </div>
+
+                <div class="powerdns-link-card mt-4">
+                  <div class="link-info">
+                    <span class="link-label">Link Akses Panel PowerDNS:</span>
+                    <span class="link-url font-mono" id="display-powerdns-url">-</span>
+                  </div>
+                  <a href="#" target="_blank" rel="noopener noreferrer" id="btn-open-powerdns" class="btn btn-primary btn-sm">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                      <polyline points="15 3 21 3 21 9"></polyline>
+                      <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                    <span>Buka Panel PowerDNS</span>
+                  </a>
+                </div>
+              </div>
+
+              <!-- Card 5: Upstream Resolvers & Server Policy -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-cyan">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3>Upstream Resolvers &amp; Policy</h3>
+                      <p class="card-subtitle">Server DNS upstream (newServer) &amp; load balancing policy</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group mt-3">
+                  <label for="cfg-server-policy">Algoritma Penyeimbang Beban (Server Policy)</label>
+                  <select id="cfg-server-policy" class="custom-select">
+                    <option value="leastOutstanding">leastOutstanding (Beban Terendah - Default)</option>
+                    <option value="firstAvailable">firstAvailable (Prioritas Utama / Failover)</option>
+                    <option value="roundrobin">roundrobin (Bergantian Merata)</option>
+                    <option value="wrandom">wrandom (Acak Berbobot)</option>
+                    <option value="whashed">whashed (Hash Konsisten)</option>
+                  </select>
+                </div>
+
+                <!-- Add Upstream Form -->
+                <div class="add-upstream-box mt-3 p-3 glass-card">
+                  <div class="upstream-inputs-grid">
+                    <div class="form-group mb-0">
+                      <label class="text-xs">Nama Resolver</label>
+                      <input type="text" id="cfg-new-srv-name" class="custom-input font-mono" placeholder="cf-1">
+                    </div>
+                    <div class="form-group mb-0">
+                      <label class="text-xs">IP &amp; Port (Wajib)</label>
+                      <input type="text" id="cfg-new-srv-addr" class="custom-input font-mono" placeholder="1.1.1.1:53">
+                    </div>
+                    <div class="form-group mb-0">
+                      <label class="text-xs">Check Domain</label>
+                      <input type="text" id="cfg-new-srv-check" class="custom-input font-mono" placeholder="cloudflare.com.">
+                    </div>
+                    <div class="form-group mb-0">
+                      <label class="text-xs">Timeout (s)</label>
+                      <input type="number" id="cfg-new-srv-timeout" class="custom-input font-mono" value="2" min="1" max="10">
+                    </div>
+                  </div>
+                  <button type="button" class="btn btn-secondary btn-sm mt-2" onclick="addUpstreamServer()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Tambah Upstream</span>
+                  </button>
+                </div>
+
+                <!-- Upstream List Table -->
+                <div class="items-table-wrap mt-3">
+                  <table class="data-table small-table">
+                    <thead>
+                      <tr>
+                        <th>Nama</th>
+                        <th>Alamat Upstream</th>
+                        <th>Check Domain</th>
+                        <th style="width: 70px; text-align: right;">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="upstream-items-tbody">
+                      <tr><td colspan="4" class="text-center text-muted">Belum ada upstream</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Card 6: Rate Limiting & Anti-DDoS -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-amber">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3>Rate Limiting (Anti-DDoS / Anti-Abuse)</h3>
+                      <p class="card-subtitle">Batasi QPS per IP client untuk mencegah DNS flood abuse</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="toggle-card-box mt-3 p-3 glass-card">
+                  <label class="switch-toggle-label" for="cfg-ratelimit-enable">
+                    <input type="checkbox" id="cfg-ratelimit-enable" onchange="toggleRateLimitFields()">
+                    <span class="switch-slider"></span>
+                    <span class="switch-text">Aktifkan Rate Limiting (MaxQPSIPRule)</span>
+                  </label>
+                  <p class="field-hint mt-2 mb-0">Lindungi server dari query flood dan serangan DNS amplification dari IP client tertentu.</p>
+                </div>
+
+                <div id="ratelimit-fields" class="mt-3">
+                  <div class="form-group">
+                    <label for="cfg-ratelimit-qps">Maksimal QPS per Client IP</label>
+                    <input type="number" id="cfg-ratelimit-qps" class="custom-input font-mono" value="100" min="5" max="10000">
+                    <span class="field-hint">Rekomendasi: 100 - 300 QPS untuk kantor / ISP menengah, 50 QPS untuk hotspot umum.</span>
+                  </div>
+
+                  <div class="form-group mt-3">
+                    <label for="cfg-ratelimit-action">Tindakan jika Melebihi Batas (Action)</label>
+                    <select id="cfg-ratelimit-action" class="custom-select">
+                      <option value="DropAction">DropAction (Buang paket diam-diam - Rekomendasi)</option>
+                      <option value="DelayAction">DelayAction (Perlambat respons 50 milidetik)</option>
+                      <option value="TruncateAction">TruncateAction (Kirim TC bit, paksa query TCP)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card 7: Custom DNS Override -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-emerald">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3>Custom DNS Override (Local Records)</h3>
+                      <p class="card-subtitle">Arahkan domain tertentu ke IP lokal/khusus tanpa lewat upstream</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Add Custom DNS Input -->
+                <div class="add-item-row mt-3">
+                  <input type="text" id="cfg-new-custom-domain" class="custom-input font-mono" placeholder="Domain (contoh: portal.kantor.id)...">
+                  <input type="text" id="cfg-new-custom-ip" class="custom-input font-mono" placeholder="IP Tujuan (contoh: 10.10.10.50)..." onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomDNSRecord();}">
+                  <button type="button" class="btn btn-secondary" onclick="addCustomDNSRecord()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Tambah</span>
+                  </button>
+                </div>
+
+                <!-- Custom DNS Table -->
+                <div class="items-table-wrap mt-3">
+                  <table class="data-table small-table">
+                    <thead>
+                      <tr>
+                        <th>Domain Target</th>
+                        <th>IP Pengganti (Spoof IP)</th>
+                        <th style="width: 70px; text-align: right;">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="customdns-items-tbody">
+                      <tr><td colspan="3" class="text-center text-muted">Belum ada record custom DNS</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Card 8: SafeSearch Enforcement -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-blue">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="M9 12l2 2 4-4"/>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3>SafeSearch Enforcement (Konten Positif)</h3>
+                      <p class="card-subtitle">Paksa mesin pencari menyaring konten dewasa secara transparan</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="safesearch-grid mt-3">
+                  <label class="safesearch-item glass-card p-3">
+                    <input type="checkbox" id="cfg-safe-google">
+                    <div class="safesearch-info">
+                      <span class="provider-name">Google SafeSearch</span>
+                      <span class="provider-desc">Arahkan google.* ke forcesafesearch (216.239.38.120)</span>
+                    </div>
+                  </label>
+
+                  <label class="safesearch-item glass-card p-3">
+                    <input type="checkbox" id="cfg-safe-bing">
+                    <div class="safesearch-info">
+                      <span class="provider-name">Bing SafeSearch</span>
+                      <span class="provider-desc">Arahkan bing.com ke strict.bing.com (204.79.197.220)</span>
+                    </div>
+                  </label>
+
+                  <label class="safesearch-item glass-card p-3">
+                    <input type="checkbox" id="cfg-safe-youtube">
+                    <div class="safesearch-info">
+                      <span class="provider-name">YouTube Restricted Mode</span>
+                      <span class="provider-desc">Arahkan youtube.com ke restrict.youtube.com</span>
+                    </div>
+                  </label>
+
+                  <label class="safesearch-item glass-card p-3">
+                    <input type="checkbox" id="cfg-safe-ddg">
+                    <div class="safesearch-info">
+                      <span class="provider-name">DuckDuckGo SafeSearch</span>
+                      <span class="provider-desc">Arahkan duckduckgo.com ke safe.duckduckgo.com</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Card 9: Query Logging Config -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-purple">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3>Pencatatan Riwayat Query (Query Log)</h3>
+                      <p class="card-subtitle">Simpan seluruh query DNS masuk ke file log server</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="toggle-card-box mt-3 p-3 glass-card">
+                  <label class="switch-toggle-label" for="cfg-query-log-enable">
+                    <input type="checkbox" id="cfg-query-log-enable">
+                    <span class="switch-slider"></span>
+                    <span class="switch-text">Aktifkan Pencatatan Query Log (LogAction)</span>
+                  </label>
+                  <p class="field-hint mt-2 mb-0">Query akan dicatat ke <code>/var/log/dnsdist_queries.log</code> dan dapat dipantau langsung di tab Live Analytics &amp; Query Log.</p>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Form Action Footer -->
+            <div class="form-save-bar glass-panel mt-4">
+              <label class="checkbox-label">
+                <input type="checkbox" id="cfg-auto-reload" checked>
+                <span>Otomatis reload service dnsdist setelah disimpan</span>
+              </label>
+
+              <button class="btn btn-primary" onclick="saveStructuredDNSDistConfig()" id="btn-save-structured">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                </svg>
+                <span>Simpan &amp; Terapkan Pengaturan</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section B: Raw Lua Editor Mode -->
+          <div id="dnsdist-raw-view" class="dnsdist-view hidden mt-4">
+            <div class="raw-editor-header-bar">
+              <span class="text-secondary text-sm">Mode ini mengedit file <code>/etc/dnsdist/dnsdist.conf</code> secara langsung. Gunakan jika ingin mengubah konfigurasi lanjutan.</span>
+              <div class="raw-actions">
+                <button class="btn btn-secondary btn-sm" onclick="testDNSDistSyntax()" id="btn-test-dnsdist">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>Uji Sintaks (Check)</span>
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="saveDNSDistConfig()" id="btn-save-dnsdist">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  </svg>
+                  <span>Simpan Raw Config</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Syntax Check Banner -->
+            <div id="dnsdist-syntax-banner" class="alert-box mt-3 hidden"></div>
+
+            <!-- Code Editor Area -->
+            <div class="code-editor-container mt-3">
+              <div class="editor-toolbar">
+                <span class="syntax-label">Lua Syntax &bull; UTF-8</span>
+                <button class="btn-copy-code" onclick="copyDNSDistContent()">Salin Semua</button>
+              </div>
+              <textarea id="dnsdist-editor" class="code-editor" spellcheck="false" placeholder="Memuat konfigurasi /etc/dnsdist/dnsdist.conf..."></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab Content: Unbound Resolver Configuration -->
+      <section id="tab-unbound" class="tab-pane">
+        <div class="glass-panel p-5">
+          <div class="editor-header">
+            <div>
+              <div class="editor-badge-row">
+                <span class="file-badge">/etc/unbound/unbound.conf.d/smartdns.conf</span>
+                <span class="mtime-badge" id="unbound-mtime">-</span>
+              </div>
+              <h2 class="section-title mt-2">Konfigurasi Unbound Resolver</h2>
+              <p class="section-desc">Kelola Domain Insecure (bypass DNSSEC), Resolver ACL (sinkron dengan DNSDist), Caching &amp; TTL, Threading CPU, dan Protokol Recursor.</p>
+            </div>
+
+            <div class="editor-action-buttons">
+              <button class="btn btn-warning" onclick="reloadUnboundService()" id="btn-reload-unbound">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                <span>Reload Service</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Unbound Mode Selector (Form Mode vs Raw Conf Mode) -->
+          <div class="dnsdist-mode-tabs mt-4">
+            <button class="subtab-btn active" id="btn-unbound-mode-form" onclick="switchUnboundMode('form')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+              <span>Form Pengaturan Visual (Quick Config)</span>
+            </button>
+            <button class="subtab-btn" id="btn-unbound-mode-raw" onclick="switchUnboundMode('raw')">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="16 18 22 12 16 6"></polyline>
+                <polyline points="8 6 2 12 8 18"></polyline>
+              </svg>
+              <span>Editor File smartdns.conf Lengkap</span>
+            </button>
+          </div>
+
+          <!-- Section A: Form Mode (Visual Quick Settings) -->
+          <div id="unbound-form-view" class="dnsdist-view active mt-4">
+            <div class="config-cards-grid">
+
+              <!-- Card 1: Domain Insecure Manager -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-amber">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 9.9-1"></path>
+                      </svg>
+                    </span>
+                    <div>
+                      <div class="d-flex align-items-center gap-2">
+                        <h3 class="mb-0">Domain Insecure (Bypass DNSSEC)</h3>
+                        <span class="badge badge-accent" id="unbound-insecure-count">0 Domain</span>
+                      </div>
+                      <p class="card-subtitle">Melewati validasi ketat DNSSEC Unbound untuk mencegah error <code>SERVFAIL/Bogus</code> pada domain perbankan, payment gateway, e-wallet, dan telco.</p>
+                    </div>
+                  </div>
+                  <div class="card-actions">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleBulkInsecureModal()">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                      </svg>
+                      <span>Input Massal (Bulk)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Bulk Add Box (Collapsible) -->
+                <div id="unbound-bulk-insecure-box" class="glass-card p-3 mt-3 hidden">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="font-medium text-white text-sm">Tambah Banyak Domain Insecure Sekaligus</span>
+                    <button type="button" class="btn-close-sm" onclick="toggleBulkInsecureModal()">✕</button>
+                  </div>
+                  <p class="field-hint mb-2">Tempel (paste) daftar domain. Pisahkan dengan enter (baris baru), koma, atau spasi. Tanda kutip dan titik di akhir domain akan otomatis dibersihkan.</p>
+                  <textarea id="unbound-bulk-insecure-input" class="custom-input font-mono mb-2" rows="4" placeholder="contoh:
+bca.co.id
+bankmandiri.co.id
+bri.co.id
+gopay.co.id
+dana.id"></textarea>
+                  <div class="d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="toggleBulkInsecureModal()">Batal</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="applyBulkDomainInsecure()">
+                      <span>Tambahkan ke Daftar</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Single Add Input & Search Row -->
+                <div class="row-two-inputs mt-3">
+                  <div class="add-item-row flex-1">
+                    <input type="text" id="unbound-new-insecure" class="custom-input font-mono" placeholder="Ketik nama domain (contoh: bankmega.com)..." onkeydown="if(event.key==='Enter'){event.preventDefault();addDomainInsecure();}">
+                    <button type="button" class="btn btn-secondary" onclick="addDomainInsecure()">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      <span>Tambah</span>
+                    </button>
+                  </div>
+
+                  <div class="search-box-wrap" style="min-width: 240px;">
+                    <input type="text" id="unbound-insecure-filter" class="custom-input" placeholder="🔍 Cari domain di daftar..." oninput="filterDomainInsecure(this.value)">
+                  </div>
+                </div>
+
+                <!-- Domain List Table -->
+                <div class="items-table-wrap mt-3" style="max-height: 280px; overflow-y: auto;">
+                  <table class="data-table small-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 50px;">No</th>
+                        <th>Domain Insecure</th>
+                        <th style="width: 140px; text-align: center;">Tipe Aturan</th>
+                        <th style="width: 80px; text-align: right;">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="unbound-insecure-tbody">
+                      <tr><td colspan="4" class="text-center text-muted">Belum ada domain insecure</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Card 2: Access Control List (ACL) -->
+              <div class="config-card glass-panel p-4">
+                <div class="config-card-header">
+                  <div class="card-title-wrap">
+                    <span class="card-icon icon-blue">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path>
+                        <path d="M2 12h20"></path>
+                      </svg>
+                    </span>
+                    <div>
+                      <h3>Resolver ACL (Access Control)</h3>
+                      <p class="card-subtitle">Prefix IP / CIDR yang diizinkan melakukan kueri ke Unbound</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="sync-banner-box mt-3 mb-2 p-2 glass-card d-flex align-items-center justify-content-between">
+                  <label class="checkbox-label mb-0" style="font-size: 0.82rem;">
+                    <input type="checkbox" id="unbound-cfg-sync-acl" checked>
+                    <span>🔄 Sinkronkan otomatis ke ACL DNSDist (Dua Arah)</span>
+                  </label>
+                  <span class="badge badge-accent text-xs">Auto-Sync</span>
+                </div>
+
+                <!-- Add ACL Input -->
+                <div class="add-item-row mt-2">
+                  <input type="text" id="unbound-new-acl" class="custom-input font-mono" placeholder="Prefix CIDR (contoh: 103.54.168.0/23)..." onkeydown="if(event.key==='Enter'){event.preventDefault();addUnboundACL();}">
+                  <button type="button" class="btn btn-secondary" onclick="addUnboundACL()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Tambah</span>
+                  </button>
+                </div>
+
+                <!-- ACL Table -->
+                <div class="items-table-wrap mt-3">
+                  <table class="data-table small-table">
+                    <thead>
+                      <tr>
+                        <th>Prefix / CIDR</th>
+                        <th style="width: 120px; text-align: center;">Tipe</th>
+                        <th style="width: 70px; text-align: right;">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="unbound-acl-tbody">
+                      <!-- Rendered by JS -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Form Action Footer -->
+
+            <div class="form-save-bar glass-panel mt-4">
+              <label class="checkbox-label">
+                <input type="checkbox" id="unbound-cfg-auto-reload" checked>
+                <span>Otomatis reload service unbound setelah disimpan</span>
+              </label>
+
+              <button class="btn btn-primary" onclick="saveStructuredUnboundConfig()" id="btn-save-unbound-structured">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                </svg>
+                <span>Simpan &amp; Terapkan Pengaturan Unbound</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section B: Raw Unbound Conf Editor Mode -->
+          <div id="unbound-raw-view" class="dnsdist-view hidden mt-4">
+            <div class="raw-editor-header-bar">
+              <span class="text-secondary text-sm">Mode ini mengedit file <code>/etc/unbound/unbound.conf.d/smartdns.conf</code> secara langsung. Gunakan jika ingin mengubah konfigurasi mendalam.</span>
+              <div class="raw-actions">
+                <button class="btn btn-secondary btn-sm" onclick="testUnboundSyntax()" id="btn-test-unbound">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                  <span>Uji Sintaks (Check)</span>
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="saveUnboundRawConfig()" id="btn-save-unbound-raw">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  </svg>
+                  <span>Simpan Raw Config</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Syntax Check Banner -->
+            <div id="unbound-syntax-banner" class="alert-box mt-3 hidden"></div>
+
+            <!-- Code Editor Area -->
+            <div class="code-editor-container mt-3">
+              <div class="editor-toolbar">
+                <span class="syntax-label">Unbound Conf Syntax &bull; UTF-8</span>
+                <button class="btn-copy-code" onclick="copyUnboundContent()">Salin Semua</button>
+              </div>
+              <textarea id="unbound-editor" class="code-editor" spellcheck="false" placeholder="Memuat konfigurasi /etc/unbound/unbound.conf.d/smartdns.conf..."></textarea>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab Content: Blocklist Sources Editor -->
+      <section id="tab-sources" class="tab-pane">
+        <div class="glass-panel p-5">
+          <div class="editor-header">
+            <div>
+              <div class="editor-badge-row">
+                <span class="file-badge">/opt/blocklist/sources.txt</span>
+                <span class="mtime-badge" id="sources-mtime">-</span>
+              </div>
+              <h2 class="section-title mt-2">Daftar Sumber URL Blocklist</h2>
+              <p class="section-desc">Tentukan URL feed untuk digabungkan (*merge*) atau sebagai cadangan (*fallback*) oleh skrip pembaruan domain.</p>
+            </div>
+
+            <div class="editor-action-buttons">
+              <button class="btn btn-accent" onclick="triggerBlocklistUpdate()" id="btn-run-update">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <span>Update Blocklist Sekarang</span>
+              </button>
+              <button class="btn btn-primary" onclick="saveSourcesConfig()" id="btn-save-sources">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                </svg>
+                <span>Simpan Sumber</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Guide Card -->
+          <div class="info-guide-card mt-3">
+            <div class="guide-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              Format Penulisan /opt/blocklist/sources.txt:
+            </div>
+            <ul class="guide-list">
+              <li><code>merge &lt;URL&gt;</code> : Mengunduh feed domain dan menggabungkannya ke dalam blocklist utama.</li>
+              <li><code>fallback &lt;URL&gt;</code> : URL cadangan jika sumber merge gagal diunduh.</li>
+              <li>Baris yang diawali dengan tanda pagar <code>#</code> dianggap sebagai komentar.</li>
+            </ul>
+          </div>
+
+          <!-- Code Editor Area -->
+          <div class="code-editor-container mt-3">
+            <div class="editor-toolbar">
+              <span class="syntax-label">Plaintext / Sources &bull; UTF-8</span>
+              <button class="btn-copy-code" onclick="copySourcesContent()">Salin Sumber</button>
+            </div>
+            <textarea id="sources-editor" class="code-editor sources-textarea" spellcheck="false" placeholder="Memuat isi /opt/blocklist/sources.txt..."></textarea>
+          </div>
+
+          <!-- Live Update Log Area -->
+          <div class="update-log-panel mt-4">
+            <div class="log-panel-header">
+              <div class="log-title">
+                <span class="log-dot" id="log-status-dot"></span>
+                <span>Log Pembaruan Terakhir (/opt/blocklist/update.log)</span>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="fetchUpdateLog()">Segarkan Log</button>
+            </div>
+            <pre class="log-viewer font-mono" id="log-viewer">Memuat log pembaruan...</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab Content: Active Services (netstat -ntplu) -->
+      <section id="tab-services" class="tab-pane">
+        <div class="glass-panel p-5">
+          <div class="services-header-row">
+            <div>
+              <div class="badge-tag-wrap">
+                <span class="file-badge">netstat -ntplu</span>
+                <span class="live-pulse-badge">Live Monitor</span>
+              </div>
+              <h2 class="section-title mt-2">Daftar Servis yang Sedang Berjalan</h2>
+              <p class="section-desc">Menampilkan port yang sedang membuka koneksi (LISTEN) beserta Process ID (PID) dan nama program.</p>
+            </div>
+
+            <div class="service-actions">
+              <div class="service-filter-box">
+                <input type="text" id="service-filter" placeholder="Saring port atau program (dnsdist, unbound, 53)..." oninput="filterServicesTable()">
+              </div>
+              <button class="btn btn-secondary" onclick="fetchServices()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                <span>Segarkan</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Services Table -->
+          <div class="table-responsive mt-4">
+            <table class="data-table services-table">
+              <thead>
+                <tr>
+                  <th style="width: 90px;">Protokol</th>
+                  <th>Alamat Lokal (IP:Port)</th>
+                  <th style="width: 100px;">Port</th>
+                  <th>Alamat Tujuan</th>
+                  <th style="width: 120px;">Status</th>
+                  <th style="width: 110px;">PID</th>
+                  <th>Nama Program / Proses</th>
+                </tr>
+              </thead>
+              <tbody id="services-tbody">
+                <tr>
+                  <td colspan="7" class="text-center py-5">Memuat data servis dari server...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab Content: Live Analytics & Query Log -->
+      <section id="tab-analytics" class="tab-pane">
+        <div class="glass-panel p-5">
+          <div class="editor-header">
+            <div>
+              <div class="badge-tag-wrap">
+                <span class="file-badge">dnsdist console</span>
+                <span class="live-pulse-badge">Real-Time Telemetry</span>
+              </div>
+              <h2 class="section-title mt-2">Live Analytics &amp; Riwayat Query</h2>
+              <p class="section-desc">Pantau statistik query real-time, kesehatan resolver upstream, domain terpopuler, dan catatan query log.</p>
+            </div>
+
+            <div class="editor-action-buttons">
+              <button class="btn btn-flush" onclick="flushDNSCache()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+                <span>Flush DNS Cache</span>
+              </button>
+              <button class="btn btn-secondary" onclick="fetchLiveAnalytics()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 4v6h-6"></path>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+                <span>Segarkan</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Real-Time Metrics Cards -->
+          <div class="stats-grid mt-4">
+            <div class="stat-card glass-panel">
+              <div class="stat-header">
+                <span class="stat-label">Total Query Diproses</span>
+                <div class="stat-icon-wrap icon-cyan">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 6v6l4 2"></path>
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-number text-white font-mono" id="ana-total-queries">-</div>
+              <div class="stat-meta"><span class="meta-tag">Sejak service aktif</span></div>
+            </div>
+
+            <div class="stat-card glass-panel">
+              <div class="stat-header">
+                <span class="stat-label">Cache Hit Ratio</span>
+                <div class="stat-icon-wrap icon-emerald">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-number gradient-text font-mono" id="ana-cache-ratio">0.0%</div>
+              <div class="stat-meta"><span class="meta-tag" id="ana-cache-hits-meta">0 Hits / 0 Misses</span></div>
+            </div>
+
+            <div class="stat-card glass-panel">
+              <div class="stat-header">
+                <span class="stat-label">Rata-rata Latensi</span>
+                <div class="stat-icon-wrap icon-purple">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-number text-white font-mono" id="ana-avg-latency">0 ms</div>
+              <div class="stat-meta"><span class="meta-tag">Sample 100 query terakhir</span></div>
+            </div>
+
+            <div class="stat-card glass-panel">
+              <div class="stat-header">
+                <span class="stat-label">Terkoneksi ke Console</span>
+                <div class="stat-icon-wrap icon-blue">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                    <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                    <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                    <line x1="6" y1="18" x2="6.01" y2="18"></line>
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-number font-mono" id="ana-console-status"><span class="badge badge-success">CONNECTED</span></div>
+              <div class="stat-meta"><span class="meta-tag">127.0.0.1:5199</span></div>
+            </div>
+          </div>
+
+          <!-- Upstream Servers Live Telemetry -->
+          <div class="glass-panel p-4 mt-4">
+            <h3 class="panel-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+              </svg>
+              Status &amp; Kesehatan Upstream Resolvers (Live)
+            </h3>
+            <div class="table-responsive mt-3">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px;">ID</th>
+                    <th>Nama Resolver</th>
+                    <th>Alamat Upstream</th>
+                    <th style="width: 100px; text-align: center;">Status</th>
+                    <th style="width: 90px; text-align: right;">QPS</th>
+                    <th style="width: 110px; text-align: right;">Latensi (ms)</th>
+                    <th style="width: 130px; text-align: right;">Total Query</th>
+                    <th style="width: 90px; text-align: right;">Drops</th>
+                  </tr>
+                </thead>
+                <tbody id="live-servers-tbody">
+                  <tr><td colspan="8" class="text-center py-4">Memuat data upstream...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Top Queries & Top Responses Grid -->
+          <div class="grid-2-col mt-4">
+            <div class="glass-panel p-4">
+              <h3 class="panel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                Top 10 Domain Paling Sering Diminta (Queries)
+              </h3>
+              <div class="table-responsive mt-3">
+                <table class="data-table small-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px;">#</th>
+                      <th>Nama Domain</th>
+                      <th style="width: 90px; text-align: right;">Jumlah</th>
+                      <th style="width: 70px; text-align: right;">Porsi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="top-queries-tbody">
+                    <tr><td colspan="4" class="text-center py-3 text-muted">Memuat data query...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="glass-panel p-4">
+              <h3 class="panel-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Top 10 Domain Jawaban Teratas (Responses)
+              </h3>
+              <div class="table-responsive mt-3">
+                <table class="data-table small-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px;">#</th>
+                      <th>Nama Domain</th>
+                      <th style="width: 90px; text-align: right;">Jumlah</th>
+                      <th style="width: 70px; text-align: right;">Porsi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="top-responses-tbody">
+                    <tr><td colspan="4" class="text-center py-3 text-muted">Memuat data responses...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Query Log Viewer Box -->
+          <div class="glass-panel p-4 mt-4">
+            <div class="querylog-header-bar">
+              <div class="querylog-title-wrap">
+                <h3 class="panel-title mb-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  Riwayat Query Log (/var/log/dnsdist_queries.log)
+                </h3>
+                <span class="file-size-badge" id="querylog-size-badge">-</span>
+              </div>
+
+              <div class="querylog-actions">
+                <select id="querylog-lines-select" class="custom-select custom-select-sm" onchange="fetchQueryLog()">
+                  <option value="50">50 baris terakhir</option>
+                  <option value="100" selected>100 baris terakhir</option>
+                  <option value="250">250 baris terakhir</option>
+                  <option value="500">500 baris terakhir</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" onclick="fetchQueryLog()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
+                  <span>Segarkan Log</span>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="clearQueryLog()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                  <span>Kosongkan Log</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="querylog-status-notice" class="mt-2 text-sm text-secondary"></div>
+            <pre class="log-viewer font-mono querylog-terminal mt-3" id="querylog-viewer">Memuat catatan query...</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab Content: Tools & Maintenance -->
+      <section id="tab-tools" class="tab-pane">
+        <div class="tools-container">
+          
+          <!-- System Information & Health Banner -->
+          <div class="glass-panel p-4 tools-hero-panel">
+            <div class="hero-info-grid">
+              <div class="hero-stat-item">
+                <span class="hero-label">SmartDNS Core</span>
+                <div class="hero-val-wrap">
+                  <span class="hero-version-pill" id="tool-smartdns-version">v1.0.2</span>
+                  <span class="hero-branch-pill font-mono" id="tool-git-commit">git: main</span>
+                </div>
+              </div>
+              <div class="hero-stat-item">
+                <span class="hero-label">Telemetry UUID</span>
+                <div class="hero-val-wrap">
+                  <span class="hero-uuid-text font-mono" id="tool-uuid" title="Klik untuk salin">-</span>
+                  <button class="btn-copy-small" onclick="copyUUID()" title="Salin UUID">&#x2398;</button>
+                </div>
+              </div>
+              <div class="hero-stat-item">
+                <span class="hero-label">Service dnsdist (53)</span>
+                <div id="tool-dnsdist-badge"><span class="badge badge-success">ACTIVE</span></div>
+              </div>
+              <div class="hero-stat-item">
+                <span class="hero-label">Service unbound (5300)</span>
+                <div id="tool-unbound-badge"><span class="badge badge-success">ACTIVE</span></div>
+              </div>
+              <div class="hero-actions-wrap">
+                <button class="btn btn-primary btn-sm" onclick="runQuickDiagnostics()" id="btn-quick-diag">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  <span>⚡ Quick Health Check</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="fetchToolsSystemInfo()">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"></path>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                  </svg>
+                  <span>Segarkan</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 1: DNS Resolution Test Suite (dig) -->
+          <div class="glass-panel p-4 mt-4">
+            <div class="section-title-wrap">
+              <div class="title-with-icon">
+                <div class="icon-circle icon-cyan">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="panel-title mb-0">Useful Commands — DNS Resolution Test Suite (Live Dig)</h3>
+                  <p class="panel-desc">Uji kemampuan resolusi DNS secara langsung pada port 53 (dnsdist IPv4/IPv6) dan port 5300 (unbound backend recursive)</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="dig-controls-bar mt-3">
+              <div class="dig-input-group">
+                <label for="tool-dig-domain" class="form-label-sm">Target Domain / Hostname:</label>
+                <div class="input-with-chips">
+                  <input type="text" id="tool-dig-domain" class="form-input" value="google.com" placeholder="contoh: google.com">
+                  <div class="domain-quick-chips">
+                    <button type="button" class="chip" onclick="setDigDomain('google.com')">google.com</button>
+                    <button type="button" class="chip" onclick="setDigDomain('kominfo.go.id')">kominfo.go.id</button>
+                    <button type="button" class="chip" onclick="setDigDomain('cloudflare.com')">cloudflare.com</button>
+                    <button type="button" class="chip" onclick="setDigDomain('netflix.com')">netflix.com</button>
+                    <button type="button" class="chip" onclick="setDigDomain('detik.com')">detik.com</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="dig-meta-controls">
+                <div class="control-item">
+                  <label for="tool-dig-type" class="form-label-sm">Tipe Record:</label>
+                  <select id="tool-dig-type" class="custom-select custom-select-sm">
+                    <option value="A" selected>A (IPv4)</option>
+                    <option value="AAAA">AAAA (IPv6)</option>
+                    <option value="MX">MX (Mail)</option>
+                    <option value="TXT">TXT (Text)</option>
+                    <option value="NS">NS (Nameserver)</option>
+                    <option value="CNAME">CNAME</option>
+                    <option value="PTR">PTR (Reverse)</option>
+                    <option value="ANY">ANY</option>
+                  </select>
+                </div>
+
+                <div class="control-item control-checkbox">
+                  <label class="checkbox-label" title="Tampilkan hanya jawaban IP tanpa header statistik verbose">
+                    <input type="checkbox" id="tool-dig-short">
+                    <span>Singkat (+short)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dig Action Cards Grid -->
+            <div class="action-cards-grid mt-3">
+              <div class="tool-card">
+                <div class="tool-card-body">
+                  <div class="tool-badge">Port 53 &bull; Frontend IPv4</div>
+                  <h4>Test DNS IPv4</h4>
+                  <code class="cmd-snippet">dig @127.0.0.1 &lt;domain&gt;</code>
+                  <p class="tool-desc">Menguji routing masuk dnsdist IPv4 loopback</p>
+                </div>
+                <div class="tool-card-footer">
+                  <button class="btn btn-outline-cyan btn-sm btn-block" onclick="runDigCommand('ipv4')">
+                    <span>Uji IPv4 (Port 53)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="tool-card">
+                <div class="tool-card-body">
+                  <div class="tool-badge">Port 53 &bull; Frontend IPv6</div>
+                  <h4>Test DNS IPv6</h4>
+                  <code class="cmd-snippet">dig @::1 &lt;domain&gt;</code>
+                  <p class="tool-desc">Menguji antarmuka IPv6 dnsdist loopback</p>
+                </div>
+                <div class="tool-card-footer">
+                  <button class="btn btn-outline-cyan btn-sm btn-block" onclick="runDigCommand('ipv6')">
+                    <span>Uji IPv6 (Port 53)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="tool-card">
+                <div class="tool-card-body">
+                  <div class="tool-badge">Port 5300 &bull; Backend Recurser</div>
+                  <h4>Test Recursive Resolver</h4>
+                  <code class="cmd-snippet">dig @127.0.0.1 -p 5300 &lt;domain&gt;</code>
+                  <p class="tool-desc">Menguji langsung resolver recursive Unbound</p>
+                </div>
+                <div class="tool-card-footer">
+                  <button class="btn btn-outline-cyan btn-sm btn-block" onclick="runDigCommand('recursive')">
+                    <span>Uji Recurser (Port 5300)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="tool-card highlight-card">
+                <div class="tool-card-body">
+                  <div class="tool-badge badge-glow">All-in-One Benchmark</div>
+                  <h4>Uji Semua Resolusi</h4>
+                  <code class="cmd-snippet">dig IPv4 + IPv6 + Recurser</code>
+                  <p class="tool-desc">Menjalankan ketiga pengujian sekaligus dan membandingkan hasilnya</p>
+                </div>
+                <div class="tool-card-footer">
+                  <button class="btn btn-primary btn-sm btn-block" onclick="runDigCommand('all')">
+                    <span>Jalankan Semua Tes DNS</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Configuration Check & Service Management (2 Columns) -->
+          <div class="grid-2-col mt-4">
+            
+            <!-- Card: Config Syntax Verification -->
+            <div class="glass-panel p-4">
+              <div class="title-with-icon mb-3">
+                <div class="icon-circle icon-purple">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="panel-title mb-0">Useful Commands — Check Configuration</h3>
+                  <p class="panel-desc">Validasi sintaks sebelum restart service</p>
+                </div>
+              </div>
+
+              <div class="tool-list-wrap">
+                <div class="tool-row-item">
+                  <div class="tool-row-info">
+                    <strong>Check Unbound Config</strong>
+                    <code class="cmd-inline">unbound-checkconf</code>
+                    <span class="text-xs text-muted">Validasi file /etc/unbound/unbound.conf</span>
+                  </div>
+                  <button class="btn btn-secondary btn-sm" onclick="runConfigCheck('unbound')">
+                    <span>Cek Unbound</span>
+                  </button>
+                </div>
+
+                <div class="tool-row-item">
+                  <div class="tool-row-info">
+                    <strong>Check DNSDist Config</strong>
+                    <code class="cmd-inline">dnsdist --check-config</code>
+                    <span class="text-xs text-muted">Validasi skrip Lua /etc/dnsdist/dnsdist.conf</span>
+                  </div>
+                  <button class="btn btn-secondary btn-sm" onclick="runConfigCheck('dnsdist')">
+                    <span>Cek DNSDist</span>
+                  </button>
+                </div>
+
+                <div class="tool-row-item highlight-row">
+                  <div class="tool-row-info">
+                    <strong>Periksa Keduanya Sekaligus</strong>
+                    <span class="text-xs text-secondary">Jalankan validasi Unbound dan DNSDist dalam 1 klik</span>
+                  </div>
+                  <button class="btn btn-primary btn-sm" onclick="runConfigCheck('both')">
+                    <span>Cek Keduanya</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card: Service Management -->
+            <div class="glass-panel p-4">
+              <div class="title-with-icon mb-3">
+                <div class="icon-circle icon-blue">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="12" x2="2" y2="12"></line>
+                    <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+                    <line x1="6" y1="16" x2="6.01" y2="16"></line>
+                    <line x1="10" y1="16" x2="10.01" y2="16"></line>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="panel-title mb-0">Useful Commands — Service Control</h3>
+                  <p class="panel-desc">Cek status real-time &amp; restart daemon sistem</p>
+                </div>
+              </div>
+
+              <div class="tool-list-wrap">
+                <div class="tool-row-item">
+                  <div class="tool-row-info">
+                    <strong>unbound (Recursive)</strong>
+                    <code class="cmd-inline">systemctl [status|restart] unbound</code>
+                  </div>
+                  <div class="btn-group-sm">
+                    <button class="btn btn-secondary btn-sm" onclick="runServiceStatus('unbound')">Status</button>
+                    <button class="btn btn-warning btn-sm" onclick="runServiceRestart('unbound')">Restart</button>
+                  </div>
+                </div>
+
+                <div class="tool-row-item">
+                  <div class="tool-row-info">
+                    <strong>dnsdist (Frontend LB)</strong>
+                    <code class="cmd-inline">systemctl [status|restart] dnsdist</code>
+                  </div>
+                  <div class="btn-group-sm">
+                    <button class="btn btn-secondary btn-sm" onclick="runServiceStatus('dnsdist')">Status</button>
+                    <button class="btn btn-warning btn-sm" onclick="runServiceRestart('dnsdist')">Restart</button>
+                  </div>
+                </div>
+
+                <div class="tool-row-item highlight-row">
+                  <div class="tool-row-info">
+                    <strong>Restart Kedua Service</strong>
+                    <span class="text-xs text-secondary">systemctl restart unbound &amp;&amp; dnsdist</span>
+                  </div>
+                  <button class="btn btn-danger btn-sm" onclick="runServiceRestart('both')">
+                    <span>Restart Keduanya</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Section 3: Telemetry, Heartbeat & Metadata Viewer -->
+          <div class="glass-panel p-4 mt-4">
+            <div class="title-with-icon mb-3">
+              <div class="icon-circle icon-emerald">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </div>
+              <div>
+                <h3 class="panel-title mb-0">Useful Commands — Telemetry &amp; System Metadata</h3>
+                <p class="panel-desc">Kirim heartbeat manual dan periksa berkas environment registrasi SmartDNS</p>
+              </div>
+            </div>
+
+            <div class="tools-grid-3 mt-3">
+              <div class="tool-card">
+                <div class="tool-card-body">
+                  <h4>Manual Heartbeat</h4>
+                  <code class="cmd-snippet">/usr/local/bin/smartdns-heartbeat</code>
+                  <p class="tool-desc">Kirim deteksi hardware dan telemetri langsung ke server pusat monitoring SmartDNS (tanpa jeda sleep).</p>
+                </div>
+                <div class="tool-card-footer">
+                  <button class="btn btn-primary btn-sm btn-block" onclick="runHeartbeat()">
+                    <span>Kirim Heartbeat Sekarang</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="tool-card">
+                <div class="tool-card-body">
+                  <h4>View Installation Metadata</h4>
+                  <code class="cmd-snippet">cat /var/lib/smartdns/install.json</code>
+                  <p class="tool-desc">Tampilkan data JSON UUID instalasi, rilis versi, tanggal pemasangan, dan izin telemetri node ini.</p>
+                </div>
+                <div class="tool-card-footer">
+                  <button class="btn btn-secondary btn-sm btn-block" onclick="runViewMetadata()">
+                    <span>Buka install.json</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="tool-card">
+                <div class="tool-card-body">
+                  <h4>View Installation Path</h4>
+                  <code class="cmd-snippet">cat /var/lib/smartdns/install.env</code>
+                  <p class="tool-desc">Tampilkan variabel direktori dasar instalasi SmartDNS (SMARTDNS_HOME=/root/SmartDNS).</p>
+                </div>
+                <div class="tool-card-footer">
+                  <button class="btn btn-secondary btn-sm btn-block" onclick="runViewInstallEnv()">
+                    <span>Buka install.env</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 4: SmartDNS Core Updates Suite -->
+          <div class="glass-panel p-4 mt-4 update-suite-panel">
+            <div class="section-title-wrap">
+              <div class="title-with-icon">
+                <div class="icon-circle icon-rose">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="panel-title mb-0">SmartDNS Core Updates &amp; Patching Suite</h3>
+                  <p class="panel-desc">Pembaruan patch aman untuk instalasi SmartDNS aktif.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="update-cards-grid mt-3">
+              
+              <!-- Update Option 1: Patch Update (Recommended) -->
+              <div class="update-card recommended-card">
+                <div class="update-card-badge">Rekomendasi (Existing)</div>
+                <div class="update-card-header">
+                  <h4>Updating SmartDNS Patch</h4>
+                  <span class="update-subtitle">Pembaruan patch aman untuk server operasional</span>
+                </div>
+                <div class="update-cmd-box">
+                  <code>cd SmartDNS &amp;&amp; bash update.sh --patch</code>
+                </div>
+                <div class="update-features-list">
+                  <div class="feature-item"><span class="check-icon">&#10003;</span> Mempertahankan UUID &amp; Telemetry</div>
+                  <div class="feature-item"><span class="check-icon">&#10003;</span> Mempertahankan Runtime Information</div>
+                  <div class="feature-item"><span class="check-icon">&#10003;</span> Mempertahankan Konfigurasi yang ada</div>
+                  <div class="feature-item"><span class="check-icon">&#10003;</span> Mempertahankan Cron Scheduler</div>
+                </div>
+                <button class="btn btn-primary btn-block mt-3" onclick="triggerUpdate('patch')">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                  <span>Jalankan Patch Update</span>
+                </button>
+              </div>
+
+
+            </div>
+          </div>
+
+          <!-- Section 5: Live Interactive Terminal Console -->
+          <div class="glass-panel p-4 mt-4 terminal-container-panel" id="tools-terminal-section">
+            <div class="terminal-header-bar">
+              <div class="terminal-title-group">
+                <div class="terminal-window-dots">
+                  <span class="dot-red"></span>
+                  <span class="dot-yellow"></span>
+                  <span class="dot-green"></span>
+                </div>
+                <span class="terminal-title">Terminal Eksekusi Perintah</span>
+                <span class="terminal-status-pill idle" id="terminal-status-badge">SIAP (IDLE)</span>
+                <span class="terminal-cmd-pill font-mono" id="terminal-cmd-badge">-</span>
+                <span class="terminal-time-pill font-mono" id="terminal-time-badge">0ms</span>
+              </div>
+
+              <div class="terminal-actions">
+                <button class="btn btn-secondary btn-sm" onclick="copyTerminalOutput()" title="Salin seluruh isi output">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span>Salin Output</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="clearTerminalOutput()" title="Bersihkan terminal">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                  <span>Bersihkan</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="terminal-viewport">
+              <pre class="font-mono terminal-body" id="tools-terminal-output">Pilih salah satu perintah pengujian di atas atau jalankan pembaruan sistem untuk melihat output langsung di sini.</pre>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Modal: Konfirmasi Pembaruan Paksa -->
+      
+    </main>
+  </div>
+
+  <script src="/static/app.js?v=3.6"></script>
+</body>
+</html>

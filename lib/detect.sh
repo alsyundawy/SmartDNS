@@ -16,15 +16,17 @@
 # shellcheck disable=SC2312
 detect_cpu() {
 
-	CPU_MODEL=$(lscpu | awk -F: '/Model name:/{
-        gsub(/^[ \t]+/,"",$2)
+	CPU_MODEL=$(lscpu | awk -F: '$1 ~ /^Model name$/ {
+        gsub(/^[[:space:]]+/, "", $2)
+        gsub(/[[:space:]]+/, " ", $2)
         print $2
+        exit
     }')
 
-	CPU_PHYSICAL=$(lscpu | awk -F: '
-	/Core\(s\) per socket/ {gsub(/ /,"",$2); c=$2}
-	/Socket\(s\)/ {gsub(/ /,"",$2); s=$2}
-	END {print c*s}')
+	CPU_PHYSICAL=$(lscpu -p=CPU,CORE,SOCKET 2>/dev/null |
+		awk -F, '!/^#/ {print $2 "," $3}' |
+		sort -u |
+		wc -l)
 
 	CPU_THREADS=$(nproc)
 

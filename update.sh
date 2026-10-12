@@ -65,6 +65,26 @@ source "${BASE_DIR}/engine/cron.sh"
 source "${BASE_DIR}/engine/swap.sh"
 # shellcheck source=engine/sysctl.sh
 source "${BASE_DIR}/engine/sysctl.sh"
+# shellcheck source=engine/update.sh
+source "${BASE_DIR}/engine/update.sh"
+
+####################################
+# Git Repository Check
+####################################
+
+check_git() {
+
+	if ! command -v git >/dev/null 2>&1; then
+		error "Git is not installed."
+		return 1
+	fi
+
+	if ! git -C "${BASE_DIR}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+		error "SmartDNS directory is not a Git repository."
+		return 1
+	fi
+
+}
 
 ####################################
 # Menu Options
@@ -77,13 +97,21 @@ Usage:
     $0 --help
 
 Options:
-    --patch    Update patch
+    --patch    Update SmartDNS
 EOF
 }
 
 case "${1:-}" in
 	--patch)
 		banner
+
+		info "Checking root..."
+		if [[ "${EUID}" -ne 0 ]]; then
+			error "This command must be run as root."
+			exit 1
+		fi
+
+		check_git || exit 1
 
 		info "Update Repositories..."
 
@@ -100,27 +128,11 @@ case "${1:-}" in
 			exec "${SCRIPT_PATH}" --patch
 		fi
 
-		install_blocklist || exit 1
+		update_features || exit 1
 
-		if [[ -r cache/wizard.env ]]; then
-			# shellcheck disable=SC1091
-			source cache/wizard.env
-		fi
-
-		ENABLE_AUTO_UPDATE="${ENABLE_AUTO_UPDATE:-yes}"
-
-		info "Check Automatic Update..."
-		automatic_update_scheduler || exit 1
-
-		mkdir -p cache
-		if grep -q '^ENABLE_AUTO_UPDATE=' cache/wizard.env 2>/dev/null; then
-			sed -i "s/^ENABLE_AUTO_UPDATE=.*/ENABLE_AUTO_UPDATE=${ENABLE_AUTO_UPDATE}/" cache/wizard.env
-		else
-			echo "ENABLE_AUTO_UPDATE=${ENABLE_AUTO_UPDATE}" >> cache/wizard.env
-		fi
-
-		restart_services || exit 1
 		save_state SERVICE
+
+		success "SmartDNS update completed."
 		;;
 	--help)
 		usage

@@ -41,18 +41,39 @@ generate_uuid() {
 	mkdir -p "${TELEMETRY_DIR}"
 
 	if [[ -s ${UUID_FILE} ]]; then
-		UUID="$(<"${UUID_FILE}")"
+		UUID="$(tr -d '\r\n' <"${UUID_FILE}")"
+	elif [[ -r /proc/sys/kernel/random/uuid ]]; then
+		UUID="$(cat /proc/sys/kernel/random/uuid)"
+	elif command -v uuidgen >/dev/null 2>&1; then
+		UUID="$(uuidgen)"
+	elif command -v openssl >/dev/null 2>&1; then
+		UUID="$(openssl rand -hex 16 | sed 's/^\(........\)\(....\)\(....\)\(....\)\(............\)$/\1-\2-\3-\4-\5/')"
 	else
-		if [[ -r /proc/sys/kernel/random/uuid ]]; then
-			UUID="$(cat /proc/sys/kernel/random/uuid)"
-		elif command -v uuidgen >/dev/null 2>&1; then
-			UUID="$(uuidgen)"
-		else
-			UUID=$(od -x -N 16 /dev/urandom | head -n 1 | awk '{print $2$3"-"$4"-"$5"-"$6"-"$7$8$9}')
-		fi
-		printf '%s\n' "${UUID}" >"${UUID_FILE}"
-		chmod 600 "${UUID_FILE}"
+		UUID="$(od -x -N 16 /dev/urandom | head -n 1 | awk '{print $2$3"-"$4"-"$5"-"$6"-"$7$8$9}')"
 	fi
+
+	if [[ ! ${UUID} =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then
+		echo "ERROR: Invalid telemetry UUID: ${UUID}" >&2
+		return 1
+	fi
+
+	printf '%s\n' "${UUID}" >"${UUID_FILE}"
+	chmod 600 "${UUID_FILE}"
+
+}
+
+####################################
+# Update UUID
+####################################
+
+update_install_uuid() {
+
+	[[ -z ${UUID:-} ]] && return 1
+	[[ ! -f ${INSTALL_FILE} ]] && return 0
+
+	sed -i \
+		"s/\"uuid\":\"[^\"]*\"/\"uuid\":\"${UUID}\"/" \
+		"${INSTALL_FILE}"
 
 }
 
@@ -162,6 +183,11 @@ EOF
 ####################################
 
 send_heartbeat() {
+
+	if [[ -z ${UUID:-} ]]; then
+		echo "ERROR: Telemetry UUID is empty" >&2
+		return 1
+	fi
 
 	build_telemetry_payload
 

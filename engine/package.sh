@@ -25,6 +25,8 @@ PACKAGES=(
 	ca-certificates
 	freecdb
 	openssl
+	cron
+	git
 )
 
 #########################################
@@ -170,7 +172,9 @@ verify_packages() {
 		jq \
 		ca-certificates \
 		freecdb \
-		openssl; do
+		openssl \
+		cron \
+		git; do
 		if dpkg -s "${PKG}" >/dev/null 2>&1; then
 			success "${PKG} installed"
 		else

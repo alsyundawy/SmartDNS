@@ -21,6 +21,47 @@
 #
 
 ####################################
+# Ensure Cron
+####################################
+
+ensure_cron() {
+
+	if ! systemctl enable --now cron >/dev/null 2>&1; then
+		error "Failed to enable/start cron service."
+		return 1
+	fi
+
+	if ! systemctl is-active --quiet cron; then
+		error "cron service is not running."
+		return 1
+	fi
+
+	return 0
+
+}
+
+####################################
+# Reload Cron
+####################################
+
+reload_cron() {
+
+	if systemctl reload cron >/dev/null 2>&1; then
+		return 0
+	fi
+
+	if systemctl restart cron >/dev/null 2>&1; then
+		if systemctl is-active --quiet cron; then
+			return 0
+		fi
+	fi
+
+	error "Failed to reload/restart cron service."
+	return 1
+
+}
+
+####################################
 # Install Scheduler
 ####################################
 
@@ -28,8 +69,7 @@ install_scheduler() {
 
 	info "Installing Scheduler..."
 
-	# Pastikan cron aktif
-	systemctl enable --now cron >/dev/null 2>&1 || true
+	ensure_cron || return 1
 
 	# Random schedule (sekali saat install)
 	HOUR=$((RANDOM % 6))    # 00-05
@@ -48,9 +88,7 @@ EOF
 
 	chmod 644 /etc/cron.d/smartdns
 
-	# Reload cron
-	systemctl reload cron >/dev/null 2>&1 ||
-		systemctl restart cron >/dev/null 2>&1
+	reload_cron || return 1
 
 	success "Scheduler installed."
 	info "Daily update scheduled at $(printf "%02d:%02d" "${HOUR}" "${MINUTE}")."
@@ -65,6 +103,8 @@ install_heartbeat_scheduler() {
 
 	info "Installing Heartbeat Scheduler..."
 
+	ensure_cron || return 1
+
 	install -Dm755 \
 		"${BASE_DIR}/scripts/smartdns-heartbeat" \
 		/usr/local/bin/smartdns-heartbeat
@@ -75,9 +115,7 @@ install_heartbeat_scheduler() {
 
 	chmod 644 /etc/cron.d/smartdns-heartbeat
 
-	# Reload cron
-	systemctl reload cron >/dev/null 2>&1 ||
-		systemctl restart cron >/dev/null 2>&1
+	reload_cron || return 1
 
 	success "Heartbeat scheduler installed."
 
@@ -93,8 +131,7 @@ automatic_update_scheduler() {
 
 		info "Installing Automatic Update Scheduler..."
 
-		# Pastikan cron aktif
-		systemctl enable --now cron >/dev/null 2>&1 || true
+		ensure_cron || return 1
 
 		# Random schedule (sekali saat install)
 		HOUR=$((RANDOM % 6))    # 00-05
@@ -110,9 +147,7 @@ EOF
 
 		chmod 644 /etc/cron.d/smartdns-update
 
-		# Reload cron
-		systemctl reload cron >/dev/null 2>&1 ||
-			systemctl restart cron >/dev/null 2>&1
+		reload_cron || return 1
 
 		success "Automatic update scheduler installed."
 		info "Automatic Update scheduled daily at $(printf "%02d:%02d" "${HOUR}" "${MINUTE}")."
