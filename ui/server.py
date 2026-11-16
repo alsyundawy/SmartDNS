@@ -30,31 +30,48 @@ CONFIG_FILE = "/opt/smartdns-ui/config.json"
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
 
 INDEX_HTML = "index.html"
+LOGIN_HTML = "login.html"
+SMARTDNS_LOGO = "smartdns-logo.png"
 TEXT_HTML_UTF8 = "text/html; charset=utf-8"
 APP_CSS = "app.css"
 TEXT_CSS_UTF8 = "text/css; charset=utf-8"
 APP_JS = "app.js"
 APP_JS_UTF8 = "application/javascript; charset=utf-8"
+IMAGE_PNG = "image/png"
 
 STATIC_ASSET_MAP = {
-    "/": (INDEX_HTML, TEXT_HTML_UTF8),
-    "/index.html": (INDEX_HTML, TEXT_HTML_UTF8),
-    "/static/index.html": (INDEX_HTML, TEXT_HTML_UTF8),
     "/static/app.css": (APP_CSS, TEXT_CSS_UTF8),
     "/static/app.js": (APP_JS, APP_JS_UTF8),
+    "/static/login.html": (LOGIN_HTML, TEXT_HTML_UTF8),
+    "/static/smartdns-logo.png": (SMARTDNS_LOGO, IMAGE_PNG),
 }
 STATIC_SAFE_FILES = {
     INDEX_HTML: INDEX_HTML,
+    LOGIN_HTML: LOGIN_HTML,
+    SMARTDNS_LOGO: SMARTDNS_LOGO,
     APP_CSS: APP_CSS,
     APP_JS: APP_JS,
 }
 
-# Repo directory: bisa di-override oleh systemd saat GUI sudah dipasang.
+# Repo directory: bisa di-override oleh systemd atau otomatis mendeteksi direktori instalasi SmartDNS
 SMARTDNS_DIR = os.environ.get("SMARTDNS_DIR", "").strip()
 
-if not SMARTDNS_DIR:
-    # Source repo: ui/server.py -> root directory SmartDNS
-    SMARTDNS_DIR = str(Path(__file__).resolve().parent.parent)
+if not SMARTDNS_DIR or not os.path.exists(os.path.join(SMARTDNS_DIR, "VERSION")):
+    candidates = [
+        str(Path(__file__).resolve().parent.parent),
+        "/root/SmartDNS",
+        "/root/smartdns",
+        "/opt/SmartDNS",
+        "/opt/smartdns",
+        "/etc/smartdns"
+    ]
+    for c in candidates:
+        if os.path.exists(os.path.join(c, "VERSION")):
+            SMARTDNS_DIR = c
+            break
+    else:
+        if not SMARTDNS_DIR or not os.path.isdir(SMARTDNS_DIR):
+            SMARTDNS_DIR = "/root/SmartDNS"
 
 SMARTDNS_DIR = str(Path(SMARTDNS_DIR).resolve())
 
@@ -857,12 +874,23 @@ def get_server_ips():
 
 def get_tools_system_info():
     version = "Unknown"
-    version_file = os.path.join(SMARTDNS_DIR, "VERSION")
-    try:
-        with open(version_file, "r", encoding="utf-8") as vf:
-            version = vf.read().strip() or "Unknown"
-    except OSError:
-        pass
+    version_candidates = [
+        os.path.join(SMARTDNS_DIR, "VERSION"),
+        "/root/SmartDNS/VERSION",
+        "/root/smartdns/VERSION",
+        "/opt/SmartDNS/VERSION"
+    ]
+    for vp in version_candidates:
+        if os.path.exists(vp):
+            try:
+                with open(vp, "r", encoding="utf-8") as vf:
+                    val = vf.read().strip()
+                    if val:
+                        version = val
+                        break
+            except OSError:
+                pass
+
     uuid_val = "-"
     installed_at = "-"
     telemetry = True
@@ -874,6 +902,8 @@ def get_tools_system_info():
                 uuid_val = data.get("uuid", uuid_val)
                 installed_at = data.get("installed_at", installed_at)
                 telemetry = data.get("telemetry", True)
+                if version == "Unknown" and data.get("version"):
+                    version = data.get("version")
         except Exception:
             pass
 
@@ -1417,7 +1447,6 @@ def parse_dnsdist_structured(content):
             "youtube": False,
             "duckduckgo": False,
         },
-        "query_logging": False,
     }
 
     # 1. Parse Block AAAA (IPv6 Spoof)
@@ -1540,9 +1569,6 @@ def parse_dnsdist_structured(content):
         "youtube": bool(re.search(r"ytSafeSMN", content)),
         "duckduckgo": bool(re.search(r"ddgSafeSMN", content)),
     }
-
-    # 10. Query Logging
-    data["query_logging"] = bool(re.search(r'LogAction\s*\(\s*"/var/log/dnsdist_queries\.log"', content))
 
     return data
 
@@ -1815,14 +1841,12 @@ addAction(AndRule({SuffixMatchNodeRule(ddgSafeSMN), QTypeRule(DNSQType.A)}), Spo
                     sep_line = idx_aaaa
                 content = content[:sep_line] + f"{header_ss}\n\n{ss_content}\n\n" + content[sep_line:]
 
-    # 10. Update Query Log
-    if "query_logging" in new_data:
-        ql = new_data["query_logging"]
-        ql_code = 'addAction(AllRule(), LogAction("/var/log/dnsdist_queries.log", false, false, false))' if ql else ""
-        idx_ql = content.find("-- Query Log")
-        if idx_ql != -1:
-            new_ql_sec = f"-- Query Log\n----------------------------------------------------\n{ql_code}\n"
-            content = content[:idx_ql] + new_ql_sec
+    # Clean up any leftover Query Log action
+    content = re.sub(
+        r'-- Query Log\s*[-]*\s*\n\s*addAction\(AllRule\(\),\s*LogAction\("/var/log/dnsdist_queries\.log"[^\)]*\)\)\s*',
+        "",
+        content,
+    )
 
     return content
 
@@ -2077,8 +2101,12 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
         path = parsed.path
         query = parse_qs(parsed.query)
 
-        # Static assets (routed strictly through compile-time map to eliminate path injection)
-        if path in STATIC_ASSET_MAP:
+        # SMARTDNS_AUTH_HTML_GUARD_V1
+        # Login page is public; dashboard HTML requires a valid session.
+        if path in ("/", "/index.html", "/static/index.html"):
+            filename = INDEX_HTML if self._is_authenticated() else LOGIN_HTML
+            return self._serve_file(filename, TEXT_HTML_UTF8)
+        elif path in STATIC_ASSET_MAP:
             filename, mime = STATIC_ASSET_MAP[path]
             return self._serve_file(filename, mime)
         elif path.startswith("/static/"):
@@ -2210,29 +2238,6 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
             services = get_netstat_services()
             return self._send_json({"services": services, "timestamp": time.time()})
 
-        elif path == "/api/querylog":
-            lines_req = int(query.get("lines", [100])[0])
-            log_path = "/var/log/dnsdist_queries.log"
-            log_content = ""
-            file_exists = os.path.exists(log_path)
-            file_size = os.path.getsize(log_path) if file_exists else 0
-            if file_exists:
-                try:
-                    res = subprocess.run(
-                        ["tail", "-n", str(lines_req), log_path],
-                        capture_output=True,
-                        text=True,
-                    )
-                    log_content = res.stdout
-                except Exception as e:
-                    log_content = f"Error reading log: {e}"
-            return self._send_json(
-                {
-                    "exists": file_exists,
-                    "size_bytes": file_size,
-                    "lines": [line_item.strip() for line_item in log_content.splitlines() if line_item.strip()],
-                }
-            )
 
         elif path == "/api/tools/system-info":
             info = get_tools_system_info()
@@ -2634,19 +2639,32 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                 return self._send_json({"error": str(e)}, 500)
 
         elif path == "/api/cache/flush":
-            ok, out = exec_dnsdist_console('getPool(""):getCache():expunge(0)')
             unbound_flushed = False
             try:
                 r_unb = subprocess.run(
                     ["unbound-control", "flush_zone", "."],
                     capture_output=True,
                     text=True,
+                    timeout=5,
                 )
                 if r_unb.returncode == 0:
                     unbound_flushed = True
             except Exception:
                 pass
 
+            # Restart dnsdist to completely purge packet cache and reset query metrics counters to 0
+            try:
+                r_dns = subprocess.run(["systemctl", "restart", "dnsdist"], capture_output=True, text=True, timeout=8)
+                if r_dns.returncode == 0:
+                    msg = "DNS Cache & Statistik Query berhasil dibersihkan kembali ke nol!"
+                    if unbound_flushed:
+                        msg += " Cache Unbound recurser juga di-flush."
+                    return self._send_json({"success": True, "message": msg})
+            except Exception:
+                pass
+
+            # Fallback to in-memory expunge if systemctl restart was not successful
+            ok, out = exec_dnsdist_console('getPool(""):getCache():expunge(0)')
             if ok:
                 msg = f"DNS Cache dnsdist berhasil dibersihkan ({out} entries dihapus)!"
                 if unbound_flushed:
@@ -2661,15 +2679,6 @@ class SmartDNSHandler(BaseHTTPRequestHandler):
                     500,
                 )
 
-        elif path == "/api/querylog/clear":
-            log_path = "/var/log/dnsdist_queries.log"
-            try:
-                if os.path.exists(log_path):
-                    with open(log_path, "w", encoding="utf-8") as f:
-                        f.write("")
-                return self._send_json({"success": True, "message": "Query log berhasil dikosongkan."})
-            except Exception as e:
-                return self._send_json({"error": f"Gagal menghapus query log: {e}"}, 500)
 
         elif path == "/api/config/sources":
             body = self._read_json_body()

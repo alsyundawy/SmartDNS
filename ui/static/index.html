@@ -7,10 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/static/app.css?v=3.6" />
+    <link rel="stylesheet" href="/static/app.css?v=3.8" />
   </head>
   <body class="dark-theme">
     <!-- Dynamic Ambient Glows -->
@@ -23,17 +23,11 @@
       <div class="login-card glass-panel">
         <div class="login-brand">
           <div class="brand-icon pulse-glow">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              <path d="M9 12l2 2 4-4" />
-            </svg>
+            <img
+              src="/static/smartdns-logo.png"
+              alt="SmartDNS logo"
+              class="brand-logo-image brand-logo-login"
+            />
           </div>
           <h2>SmartDNS Control Center</h2>
           <p class="subtitle">Secure DNS Management &amp; Threat Defense</p>
@@ -98,7 +92,7 @@
             class="btn btn-primary btn-block"
           >
             <span class="btn-text">Masuk ke Dashboard</span>
-            <div class="spinner hidden" id="login-spinner"></div>
+            <span class="spinner hidden" id="login-spinner"></span>
           </button>
         </form>
       </div>
@@ -111,16 +105,11 @@
         <div class="sidebar-header">
           <div class="brand-badge">
             <div class="brand-logo-small">
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
+              <img
+                src="/static/smartdns-logo.png"
+                alt="SmartDNS logo"
+                class="brand-logo-image brand-logo-sidebar"
+              />
             </div>
             <div>
               <span class="brand-title">SmartDNS</span>
@@ -267,9 +256,13 @@
         </nav>
 
         <div class="sidebar-credit">
-          <div>GUI by <strong>Yohanes Exklesia</strong></div>
+          <div>GUI Source by <strong>Yohanes Exklesia</strong></div>
           <div>
             Developed by
+            <a href="https://www.facebook.com/Ichandkusuma/" target="_blank"
+              ><strong>Chandra KW</strong></a
+            >
+            |
             <a
               href="https://mynoc.id"
               target="_blank"
@@ -1139,7 +1132,7 @@
                       type="text"
                       id="cfg-new-acl"
                       class="custom-input font-mono"
-                      placeholder="Prefix CIDR (contoh: 103.54.168.0/23)..."
+                      placeholder="Prefix CIDR (contoh: 103.151.222.0/23)..."
                       onkeydown="
                         if (event.key === 'Enter') {
                           event.preventDefault();
@@ -1620,99 +1613,51 @@
                   <div class="safesearch-grid mt-3">
                     <label class="safesearch-item glass-card p-3">
                       <input type="checkbox" id="cfg-safe-google" />
-                      <div class="safesearch-info">
+                      <span class="safesearch-info">
                         <span class="provider-name">Google SafeSearch</span>
                         <span class="provider-desc"
                           >Arahkan google.* ke forcesafesearch
                           (216.239.38.120)</span
                         >
-                      </div>
+                      </span>
                     </label>
 
                     <label class="safesearch-item glass-card p-3">
                       <input type="checkbox" id="cfg-safe-bing" />
-                      <div class="safesearch-info">
+                      <span class="safesearch-info">
                         <span class="provider-name">Bing SafeSearch</span>
                         <span class="provider-desc"
                           >Arahkan bing.com ke strict.bing.com
                           (204.79.197.220)</span
                         >
-                      </div>
+                      </span>
                     </label>
 
                     <label class="safesearch-item glass-card p-3">
                       <input type="checkbox" id="cfg-safe-youtube" />
-                      <div class="safesearch-info">
+                      <span class="safesearch-info">
                         <span class="provider-name"
                           >YouTube Restricted Mode</span
                         >
                         <span class="provider-desc"
                           >Arahkan youtube.com ke restrict.youtube.com</span
                         >
-                      </div>
+                      </span>
                     </label>
 
                     <label class="safesearch-item glass-card p-3">
                       <input type="checkbox" id="cfg-safe-ddg" />
-                      <div class="safesearch-info">
+                      <span class="safesearch-info">
                         <span class="provider-name">DuckDuckGo SafeSearch</span>
                         <span class="provider-desc"
                           >Arahkan duckduckgo.com ke safe.duckduckgo.com</span
                         >
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                <!-- Card 9: Query Logging Config -->
-                <div class="config-card glass-panel p-4">
-                  <div class="config-card-header">
-                    <div class="card-title-wrap">
-                      <span class="card-icon icon-purple">
-                        <svg
-                          width="18"
-                          height="18"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                        >
-                          <path
-                            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                          ></path>
-                          <polyline points="14 2 14 8 20 8"></polyline>
-                          <line x1="16" y1="13" x2="8" y2="13"></line>
-                          <line x1="16" y1="17" x2="8" y2="17"></line>
-                          <polyline points="10 9 9 9 8 9"></polyline>
-                        </svg>
                       </span>
-                      <div>
-                        <h3>Pencatatan Riwayat Query (Query Log)</h3>
-                        <p class="card-subtitle">
-                          Simpan seluruh query DNS masuk ke file log server
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="toggle-card-box mt-3 p-3 glass-card">
-                    <label
-                      class="switch-toggle-label"
-                      for="cfg-query-log-enable"
-                    >
-                      <input type="checkbox" id="cfg-query-log-enable" />
-                      <span class="switch-slider"></span>
-                      <span class="switch-text"
-                        >Aktifkan Pencatatan Query Log (LogAction)</span
-                      >
                     </label>
-                    <p class="field-hint mt-2 mb-0">
-                      Query akan dicatat ke
-                      <code>/var/log/dnsdist_queries.log</code> dan dapat
-                      dipantau langsung di tab Live Analytics &amp; Query Log.
-                    </p>
                   </div>
                 </div>
+
+
               </div>
 
               <!-- Form Action Footer -->
@@ -2150,7 +2095,7 @@ dana.id"
                       type="text"
                       id="unbound-new-acl"
                       class="custom-input font-mono"
-                      placeholder="Prefix CIDR (contoh: 103.54.168.0/23)..."
+                      placeholder="Prefix CIDR (contoh: 103.151.222.0/23)..."
                       onkeydown="
                         if (event.key === 'Enter') {
                           event.preventDefault();
@@ -2513,11 +2458,11 @@ Memuat log pembaruan...</pre>
                   <span class="live-pulse-badge">Real-Time Telemetry</span>
                 </div>
                 <h2 class="section-title mt-2">
-                  Live Analytics &amp; Riwayat Query
+                  Live Analytics
                 </h2>
                 <p class="section-desc">
                   Pantau statistik query real-time, kesehatan resolver upstream,
-                  domain terpopuler, dan catatan query log.
+                  dan domain terpopuler.
                 </p>
               </div>
 
@@ -2807,94 +2752,6 @@ Memuat log pembaruan...</pre>
               </div>
             </div>
 
-            <!-- Live Query Log Viewer Box -->
-            <div class="glass-panel p-4 mt-4">
-              <div class="querylog-header-bar">
-                <div class="querylog-title-wrap">
-                  <h3 class="panel-title mb-0">
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path
-                        d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                      ></path>
-                      <polyline points="14 2 14 8 20 8"></polyline>
-                      <line x1="16" y1="13" x2="8" y2="13"></line>
-                      <line x1="16" y1="17" x2="8" y2="17"></line>
-                      <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    Riwayat Query Log (/var/log/dnsdist_queries.log)
-                  </h3>
-                  <span class="file-size-badge" id="querylog-size-badge"
-                    >-</span
-                  >
-                </div>
-
-                <div class="querylog-actions">
-                  <select
-                    id="querylog-lines-select"
-                    class="custom-select custom-select-sm"
-                    onchange="fetchQueryLog()"
-                  >
-                    <option value="50">50 baris terakhir</option>
-                    <option value="100" selected>100 baris terakhir</option>
-                    <option value="250">250 baris terakhir</option>
-                    <option value="500">500 baris terakhir</option>
-                  </select>
-                  <button
-                    class="btn btn-secondary btn-sm"
-                    onclick="fetchQueryLog()"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path d="M23 4v6h-6"></path>
-                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                    </svg>
-                    <span>Segarkan Log</span>
-                  </button>
-                  <button
-                    class="btn btn-danger btn-sm"
-                    onclick="clearQueryLog()"
-                  >
-                    <svg
-                      width="14"
-                      height="14"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <polyline points="3 6 5 6 21 6"></polyline>
-                      <path
-                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
-                      ></path>
-                    </svg>
-                    <span>Kosongkan Log</span>
-                  </button>
-                </div>
-              </div>
-
-              <div
-                id="querylog-status-notice"
-                class="mt-2 text-sm text-secondary"
-              ></div>
-              <pre
-                class="log-viewer font-mono querylog-terminal mt-3"
-                id="querylog-viewer"
-              >
-Memuat catatan query...</pre>
-            </div>
           </div>
         </section>
 

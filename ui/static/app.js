@@ -31,15 +31,23 @@ async function checkAuth() {
 }
 
 function showLogin() {
-  document.getElementById("login-modal").classList.remove("hidden");
-  document.getElementById("app").classList.add("hidden");
-  document.getElementById("password").value = "";
+  const modal = document.getElementById("login-modal");
+  const app = document.getElementById("app");
+  if (modal) modal.classList.remove("hidden");
+  if (app) app.classList.add("hidden");
+  const password = document.getElementById("password");
+  if (password) password.value = "";
 }
 
 function showApp() {
-  document.getElementById("login-modal").classList.add("hidden");
+  // Halaman login tidak memuat dashboard markup.
+  if (!document.getElementById("app")) {
+    window.location.replace("/");
+    return;
+  }
+  const modal = document.getElementById("login-modal");
+  if (modal) modal.classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
-
   // Initial data load
   fetchOverviewStats();
   if (!window.smartdnsMetricsTimer) {
@@ -84,7 +92,7 @@ async function handleLogin(e) {
     });
     const data = await res.json();
     if (res.ok && data.success) {
-      showApp();
+      window.location.replace('/');
     } else {
       errorBox.textContent = data.error || "Username atau password salah.";
       errorBox.classList.remove("hidden");
@@ -102,8 +110,7 @@ async function handleLogout() {
   try {
     await fetch("/api/logout", { method: "POST" });
   } catch {}
-  showLogin();
-  showToast("Anda telah keluar dari sesi.", "success");
+  window.location.replace("/");
 }
 
 // --------------------------------------------------------------------------
@@ -179,7 +186,6 @@ function switchTab(tabId) {
 
   if (tabId === "analytics") {
     fetchLiveAnalytics();
-    fetchQueryLog();
     startAnalyticsAutoRefresh();
   } else {
     stopAnalyticsAutoRefresh();
@@ -235,7 +241,6 @@ function refreshCurrentView() {
     fetchServices();
   } else if (currentTab === "analytics") {
     fetchLiveAnalytics();
-    fetchQueryLog();
   } else if (currentTab === "tools") {
     fetchToolsSystemInfo();
   }
@@ -598,11 +603,6 @@ async function fetchStructuredDNSDistConfig() {
         document.getElementById("cfg-safe-ddg").checked = !!ss.duckduckgo;
       }
 
-      // Populate Query Logging
-      if (document.getElementById("cfg-query-log-enable")) {
-        document.getElementById("cfg-query-log-enable").checked =
-          !!data.query_logging;
-      }
     } else {
       showToast("Gagal memuat konfigurasi visual: " + data.error, "error");
     }
@@ -802,9 +802,6 @@ async function saveStructuredDNSDistConfig() {
         ? document.getElementById("cfg-safe-ddg").checked
         : false,
     },
-    query_logging: document.getElementById("cfg-query-log-enable")
-      ? document.getElementById("cfg-query-log-enable").checked
-      : false,
     sync_acl: document.getElementById("cfg-sync-acl")
       ? document.getElementById("cfg-sync-acl").checked
       : true,
@@ -850,12 +847,13 @@ async function saveStructuredDNSDistConfig() {
 async function flushDNSCache() {
   const btn = document.getElementById("btn-flush-cache");
   if (btn) btn.disabled = true;
-  showToast("Membersihkan DNS cache...", "info");
+  showToast("Membersihkan DNS cache & mereset metrik query...", "info");
   try {
     const res = await fetch("/api/cache/flush", { method: "POST" });
     const data = await res.json();
     if (res.ok && data.success) {
       showToast(data.message, "success");
+      fetchOverviewStats();
       if (currentTab === "analytics") {
         fetchLiveAnalytics();
       }
@@ -1053,7 +1051,6 @@ function startAnalyticsAutoRefresh() {
   analyticsTimer = setInterval(() => {
     if (currentTab === "analytics") {
       fetchLiveAnalytics();
-      fetchQueryLog();
     }
   }, 5000);
 }
@@ -1181,70 +1178,6 @@ async function fetchLiveAnalytics() {
   }
 }
 
-async function fetchQueryLog() {
-  const select = document.getElementById("querylog-lines-select");
-  const lines = select ? select.value : 100;
-  try {
-    const res = await fetch(`/api/querylog?lines=${lines}`);
-    if (!res.ok) return;
-    const data = await res.json();
-
-    const viewer = document.getElementById("querylog-viewer");
-    const sizeBadge = document.getElementById("querylog-size-badge");
-    const notice = document.getElementById("querylog-status-notice");
-
-    if (!data.exists) {
-      if (viewer)
-        viewer.textContent =
-          'File log /var/log/dnsdist_queries.log belum dibuat. Aktifkan fitur "Pencatatan Riwayat Query (Query Log)" di tab DNSDist Config untuk mulai mencatat query.';
-      if (sizeBadge) sizeBadge.textContent = "File tidak ada";
-      if (notice)
-        notice.textContent =
-          "Status: Query logging belum aktif di konfigurasi dnsdist.";
-      return;
-    }
-
-    const kb = (data.size_bytes / 1024).toFixed(1);
-    if (sizeBadge) sizeBadge.textContent = `${kb} KB`;
-
-    if (viewer) {
-      if (data.lines && data.lines.length > 0) {
-        viewer.textContent = data.lines.join("\n");
-        if (notice)
-          notice.textContent = `Menampilkan ${data.lines.length} baris log query terbaru.`;
-      } else {
-        viewer.textContent =
-          "(Log file kosong - belum ada query baru tercatat)";
-        if (notice)
-          notice.textContent = "File log ada namun belum berisi riwayat query.";
-      }
-      viewer.scrollTop = viewer.scrollHeight;
-    }
-  } catch (err) {
-    console.error("Failed to fetch query log:", err);
-  }
-}
-
-async function clearQueryLog() {
-  if (
-    !confirm(
-      "Apakah Anda yakin ingin mengosongkan file log riwayat query (/var/log/dnsdist_queries.log)?",
-    )
-  )
-    return;
-  try {
-    const res = await fetch("/api/querylog/clear", { method: "POST" });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      showToast(data.message, "success");
-      fetchQueryLog();
-    } else {
-      showToast("Gagal mengosongkan query log: " + data.error, "error");
-    }
-  } catch (err) {
-    showToast("Error koneksi: " + err.message, "error");
-  }
-}
 
 // --------------------------------------------------------------------------
 // DNSDist Config Editor (Raw Mode)

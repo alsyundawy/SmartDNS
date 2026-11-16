@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD033 MD041 -->
+<!-- markdownlint-disable MD013 MD033 MD041 -->
 <!--
 CHANGELOG:
 - Released v1.0.3-shellcheck-optimizer with integrated SmartDNS Management Web UI on port 5000.
@@ -62,7 +62,7 @@ Developed and maintained by <a href="https://mynoc.id/" target="_blank">**MyNOC.
 
 ### 🌎 Language / Bahasa
 
-[English Documentation](#-english-documentation) • [Dokumentasi Bahasa Indonesia](#-dokumentasi-bahasa-indonesia) • [📖 Panduan Lengkap (All-in-One Guide)](docs/GUIDE.md)
+[English Documentation](#-english-documentation) • [Dokumentasi Bahasa Indonesia](#-dokumentasi-bahasa-indonesia) • [📖 Panduan Lengkap (All-in-One Guide)](docs/GUIDE.md) • [📜 Changelog](CHANGELOG.md)
 
 </div>
 
@@ -372,6 +372,12 @@ cat /etc/cron.d/smartdns-update
 | -------------------------- | :----: | ------------------------- | ------------------------------------------------------------------------------------ |
 | **SmartDNS Management UI** | `5000` | `http://<SERVER-IP>:5000` | Real-time monitoring, query analytics, blocklist lookup (`admin` / DNSDist password) |
 | **dnsdist Web Console**    | `8083` | `http://<SERVER-IP>:8083` | DNS routing stats, live query graphs (`admin` / `DNSDIST_WEB_PASSWORD`)              |
+
+### 🔑 View Web UI Password / Melihat Password Web UI
+
+```bash
+grep -oP 'password="\K[^"]+' /etc/dnsdist/dnsdist.conf
+```
 
 ---
 
